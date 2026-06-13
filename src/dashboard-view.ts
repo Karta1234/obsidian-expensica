@@ -24,6 +24,7 @@ import { renderCategoryCards } from './categories-cards';
 import { EmojiPickerModal } from './emoji-picker-modal';
 import { showCategoryQuickMenu } from './category-quick-menu';
 import { getLastAccountTransaction, renderAccountCard, renderCreateAccountCard } from './account-card';
+import { isStartingBalanceActive } from './balance';
 
 // Extend the plugin interface to include the new method
 declare module '../main' {
@@ -1741,8 +1742,13 @@ export class ExpensicaDashboardView extends ItemView {
             return transactionDate <= normalizedEndDate;
         });
 
+        const startingContribution = isStartingBalanceActive(
+            this.plugin.settings.startingBalanceDate,
+            normalizedEndDate
+        ) ? (this.plugin.settings.startingBalance || 0) : 0;
+
         if (!this.plugin.settings.enableAccounts) {
-            return transactionsThroughDate.reduce((balance, transaction) => {
+            const flow = transactionsThroughDate.reduce((balance, transaction) => {
                 if (transaction.type === TransactionType.INCOME) {
                     return balance + transaction.amount;
                 }
@@ -1751,9 +1757,10 @@ export class ExpensicaDashboardView extends ItemView {
                     ? balance - transaction.amount
                     : balance;
             }, 0);
+            return flow + startingContribution;
         }
 
-        return this.plugin.getAccounts().reduce((netBalance, account) => {
+        const accountsNet = this.plugin.getAccounts().reduce((netBalance, account) => {
             const accountReference = this.plugin.normalizeTransactionAccountReference(
                 formatAccountReference(account.type, account.name)
             );
@@ -1761,6 +1768,8 @@ export class ExpensicaDashboardView extends ItemView {
 
             return netBalance + (account.type === AccountType.CREDIT ? -accountBalance : accountBalance);
         }, 0);
+
+        return accountsNet + startingContribution;
     }
 
     getPreviousMonthEndDate(): Date {
