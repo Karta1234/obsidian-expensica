@@ -6803,6 +6803,23 @@ class AccountModal extends Modal {
         typeSelect.addEventListener('change', syncCreditLimitVisibility);
         syncCreditLimitVisibility();
 
+        const openingBalanceGroup = form.createDiv('expensica-form-group');
+        openingBalanceGroup.createEl('label', {
+            text: 'Opening balance',
+            cls: 'expensica-form-label',
+            attr: { for: 'opening-balance' }
+        });
+        const openingBalanceInput = openingBalanceGroup.createEl('input', {
+            cls: 'expensica-form-input expensica-edit-field',
+            attr: {
+                id: 'opening-balance',
+                name: 'opening-balance',
+                type: 'number',
+                step: '0.01',
+                placeholder: '0.00'
+            }
+        });
+
         const formFooter = form.createDiv('expensica-form-footer');
         const cancelBtn = formFooter.createEl('button', {
             text: 'Cancel',
@@ -6840,7 +6857,8 @@ class AccountModal extends Modal {
                 createdAt: new Date().toISOString(),
                 creditLimit: accountType === AccountType.CREDIT && creditLimitInput.value
                     ? Number(creditLimitInput.value)
-                    : undefined
+                    : undefined,
+                openingBalance: openingBalanceInput.value ? Number(openingBalanceInput.value) : undefined
             }, this.dashboardView);
 
             await this.dashboardView.loadTransactionsData();
@@ -7092,6 +7110,26 @@ class AccountEditorModal extends Modal {
         let creditLimitGroup: HTMLDivElement | null = null;
         let creditLimitInput: HTMLInputElement | null = null;
 
+        const openingBalanceGroup = form.createDiv('expensica-form-group');
+        openingBalanceGroup.createEl('label', {
+            text: 'Opening balance',
+            cls: 'expensica-form-label',
+            attr: { for: 'opening-balance' }
+        });
+        const openingBalanceInput = openingBalanceGroup.createEl('input', {
+            cls: 'expensica-form-input expensica-edit-field',
+            attr: {
+                id: 'opening-balance',
+                name: 'opening-balance',
+                type: 'number',
+                step: '0.01',
+                placeholder: '0.00'
+            }
+        });
+        openingBalanceInput.value = typeof this.account?.openingBalance === 'number'
+            ? this.account.openingBalance.toString()
+            : '';
+
         const ensureCreditLimitField = (type: AccountType) => {
             if (type !== AccountType.CREDIT) {
                 creditLimitGroup?.remove();
@@ -7248,6 +7286,7 @@ class AccountEditorModal extends Modal {
             if (accountType === AccountType.CREDIT && creditLimitInput?.value) {
                 nextAccount.creditLimit = Number(creditLimitInput.value);
             }
+            nextAccount.openingBalance = openingBalanceInput.value ? Number(openingBalanceInput.value) : undefined;
 
             if (
                 this.account
