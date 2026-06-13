@@ -1724,13 +1724,14 @@ export class ExpensicaDashboardView extends ItemView {
     }
 
     getAccountBalanceThroughDateTime(accountReference: string, endDate: Date): number {
+        const openingBalance = this.plugin.findAccountByReference(accountReference)?.openingBalance ?? 0;
         return this.plugin.getAllTransactions().reduce((balance, transaction) => {
             if (this.getTransactionDateTime(transaction) > endDate) {
                 return balance;
             }
 
             return normalizeBalanceValue(balance + getAccountTransactionAmount(this.plugin, transaction, accountReference));
-        }, 0);
+        }, openingBalance);
     }
 
     getNetBalanceThrough(endDate: Date): number {
