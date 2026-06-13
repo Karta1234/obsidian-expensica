@@ -2397,9 +2397,7 @@ export class ExpensicaDashboardView extends ItemView {
             const accountReference = formatAccountReference(account.type, account.name);
             const accountTransactions = allTransactions.filter(transaction => getAccountTransactionAmount(this.plugin, transaction, accountReference) !== 0);
             const lastTransaction = getLastAccountTransaction(accountTransactions);
-            const runningBalance = accountTransactions.reduce((balance, transaction) => (
-                normalizeBalanceValue(balance + getAccountTransactionAmount(this.plugin, transaction, accountReference))
-            ), 0);
+            const runningBalance = getAccountRunningBalance(this.plugin, accountReference, accountTransactions);
 
             renderAccountCard(accountsList, {
                 account,
@@ -3630,11 +3628,15 @@ export class ExpensicaDashboardView extends ItemView {
             .slice()
             .sort((a, b) => this.getTransactionDateTime(a).getTime() - this.getTransactionDateTime(b).getTime());
         const runningAccountBalances = accountReferences.reduce((balances, reference) => {
-            balances[reference] = 0;
+            balances[reference] = this.plugin.findAccountByReference(reference)?.openingBalance ?? 0;
             return balances;
         }, {} as Record<string, number>);
         let transactionIndex = 0;
-        let runningNetBalance = 0;
+        let runningNetBalance = accountReferences.reduce((sum, reference) => {
+            const account = this.plugin.findAccountByReference(reference);
+            const opening = account?.openingBalance ?? 0;
+            return sum + (account?.type === AccountType.CREDIT ? -opening : opening);
+        }, 0);
 
         buckets.forEach(bucket => {
             while (
