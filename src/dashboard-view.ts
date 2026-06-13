@@ -1745,7 +1745,7 @@ export class ExpensicaDashboardView extends ItemView {
         const startingContribution = isStartingBalanceActive(
             this.plugin.settings.startingBalanceDate,
             normalizedEndDate
-        ) ? (this.plugin.settings.startingBalance || 0) : 0;
+        ) ? (this.plugin.settings.startingBalance ?? 0) : 0;
 
         if (!this.plugin.settings.enableAccounts) {
             const flow = transactionsThroughDate.reduce((balance, transaction) => {
