@@ -68,8 +68,6 @@ declare global {
 // Define the settings interface for our plugin
 interface ExpensicaSettings {
     defaultCurrency: string;
-    startingBalance: number;
-    startingBalanceDate: string;
     timeFormat: '12' | '24';
     categories: Category[];
     deletedDefaultCategoryIds: string[];
@@ -120,8 +118,6 @@ export interface SharedDateRangeState {
 // Define default settings
 const DEFAULT_SETTINGS: ExpensicaSettings = {
     defaultCurrency: 'USD',
-    startingBalance: 0,
-    startingBalanceDate: '',
     timeFormat: '12',
     categories: DEFAULT_CATEGORIES,
     deletedDefaultCategoryIds: [],
@@ -1737,30 +1733,6 @@ class ExpensicaSettingTab extends PluginSettingTab {
                     }
                 );
             });
-
-        new Setting(containerEl)
-            .setName('Starting balance')
-            .setDesc('The money you already have at the start. Not counted as income or expense.')
-            .addText(text => text
-                .setPlaceholder('0')
-                .setValue(String(this.plugin.settings.startingBalance ?? 0))
-                .onChange(async (value) => {
-                    const parsed = parseFloat(value.replace(',', '.'));
-                    this.plugin.settings.startingBalance = Number.isFinite(parsed) ? parsed : 0;
-                    await this.plugin.saveSettings();
-                }));
-
-        new Setting(containerEl)
-            .setName('Starting balance date (optional)')
-            .setDesc('The "as of" date. Fill in only if you enter transactions retroactively. Format: YYYY-MM-DD.')
-            .addText(text => text
-                .setPlaceholder('YYYY-MM-DD')
-                .setValue(this.plugin.settings.startingBalanceDate ?? '')
-                .onChange(async (value) => {
-                    const trimmed = value.trim();
-                    this.plugin.settings.startingBalanceDate = /^\d{4}-\d{2}-\d{2}$/.test(trimmed) ? trimmed : '';
-                    await this.plugin.saveSettings();
-                }));
 
         new Setting(containerEl)
             .setName('Time Format')
