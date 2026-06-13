@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getCurrentBalance, isStartingBalanceActive, type BalanceTransaction } from './balance';
+import { getCurrentBalance, isStartingBalanceActive, accountBalanceFromAmounts, type BalanceTransaction } from './balance';
 
 const tx = (type: string, amount: number, date: string): BalanceTransaction => ({ type, amount, date });
 
@@ -44,5 +44,23 @@ describe('isStartingBalanceActive', () => {
 
   it('дата в будущем относительно asOf — не активен', () => {
     expect(isStartingBalanceActive('2026-07-01', new Date('2026-06-30'))).toBe(false);
+  });
+});
+
+describe('accountBalanceFromAmounts', () => {
+  it('пустой список сумм возвращает начальный баланс счёта', () => {
+    expect(accountBalanceFromAmounts(5000, [])).toBe(5000);
+  });
+
+  it('прибавляет суммы к начальному балансу', () => {
+    expect(accountBalanceFromAmounts(1000, [500, -200, -50])).toBe(1250);
+  });
+
+  it('начальный баланс 0 — обычная сумма потока', () => {
+    expect(accountBalanceFromAmounts(0, [100, -30])).toBe(70);
+  });
+
+  it('допускает отрицательный начальный баланс', () => {
+    expect(accountBalanceFromAmounts(-500, [100])).toBe(-400);
   });
 });
