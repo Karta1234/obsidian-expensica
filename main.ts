@@ -1150,6 +1150,9 @@ export default class ExpensicaPlugin extends Plugin {
             if (normalizedType === AccountType.CREDIT && typeof account.creditLimit === 'number') {
                 normalizedAccount.creditLimit = account.creditLimit;
             }
+            if (typeof account.openingBalance === 'number') {
+                normalizedAccount.openingBalance = account.openingBalance;
+            }
 
             normalizedAccounts.set(reference, normalizedAccount);
 

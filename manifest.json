@@ -1,7 +1,7 @@
 {
 	"id": "expensica",
 	"name": "Expensica",
-	"version": "1.2.0",
+	"version": "1.2.1",
 	"minAppVersion": "0.15.0",
 	"description": "Kill your spreadsheets. Track finances instantly. Keep every detail private.",
 	"author": "Dhruvir Zala <expensica@gmail.com>",
