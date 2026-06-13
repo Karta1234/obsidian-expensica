@@ -24,7 +24,7 @@ import { renderCategoryCards } from './categories-cards';
 import { EmojiPickerModal } from './emoji-picker-modal';
 import { showCategoryQuickMenu } from './category-quick-menu';
 import { getLastAccountTransaction, renderAccountCard, renderCreateAccountCard } from './account-card';
-import { isStartingBalanceActive } from './balance';
+import { isStartingBalanceActive, accountBalanceFromAmounts } from './balance';
 
 // Extend the plugin interface to include the new method
 declare module '../main' {
@@ -180,10 +180,9 @@ function getAccountTransactionAmount(plugin: ExpensicaPlugin, transaction: Trans
 }
 
 function getAccountRunningBalance(plugin: ExpensicaPlugin, accountReference: string, transactions: Transaction[]): number {
-    return transactions.reduce(
-        (balance, transaction) => normalizeBalanceValue(balance + getAccountTransactionAmount(plugin, transaction, accountReference)),
-        0
-    );
+    const openingBalance = plugin.findAccountByReference(accountReference)?.openingBalance ?? 0;
+    const amounts = transactions.map(transaction => getAccountTransactionAmount(plugin, transaction, accountReference));
+    return normalizeBalanceValue(accountBalanceFromAmounts(openingBalance, amounts));
 }
 
 function getRunningBalanceByTransactionIdForAccount(
@@ -191,7 +190,7 @@ function getRunningBalanceByTransactionIdForAccount(
     accountReference: string,
     transactions: Transaction[]
 ): Record<string, number> {
-    let runningBalance = 0;
+    let runningBalance = plugin.findAccountByReference(accountReference)?.openingBalance ?? 0;
 
     return sortTransactionsByDateTimeDesc(transactions)
         .reverse()
