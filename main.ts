@@ -68,6 +68,8 @@ declare global {
 // Define the settings interface for our plugin
 interface ExpensicaSettings {
     defaultCurrency: string;
+    startingBalance: number;
+    startingBalanceDate: string;
     timeFormat: '12' | '24';
     categories: Category[];
     deletedDefaultCategoryIds: string[];
@@ -118,6 +120,8 @@ export interface SharedDateRangeState {
 // Define default settings
 const DEFAULT_SETTINGS: ExpensicaSettings = {
     defaultCurrency: 'USD',
+    startingBalance: 0,
+    startingBalanceDate: '',
     timeFormat: '12',
     categories: DEFAULT_CATEGORIES,
     deletedDefaultCategoryIds: [],
