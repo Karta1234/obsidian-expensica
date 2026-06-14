@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Modal, Plugin, PluginSettingTab, Setting, WorkspaceLeaf, TFile } from 'obsidian';
+import { App, Editor, MarkdownView, Modal, Plugin, PluginSettingTab, Setting, WorkspaceLeaf, TFile, getLanguage } from 'obsidian';
 
 import { ExpensicaDashboardView, EXPENSICA_VIEW_TYPE, TransactionModal, DateRangeType, DashboardTab } from './src/dashboard-view';
 import { ExpensicaTransactionsView } from './src/transactions-view';
@@ -43,6 +43,7 @@ import {
 import { ExportModal } from './src/export-modal';
 import { ConfirmationModal as ExpensicaConfirmationModal } from './src/confirmation-modal';
 import { showExpensicaNotice } from './src/notice';
+import { t, resolveLocale, setActiveLocale } from './src/i18n';
 
 // Import visualizations for bundling
 import './src/dashboard-integration';
@@ -85,6 +86,7 @@ interface ExpensicaSettings {
     enableDailyFinanceReviewForAnyDate: boolean;
     dailyReviewFolder: string;
     sharedDateRangeState: SharedDateRangeState | null;
+    language: 'auto' | 'en' | 'ru';
 }
 
 type LegacyCategory = Category & { emoji?: string };
@@ -134,7 +136,8 @@ const DEFAULT_SETTINGS: ExpensicaSettings = {
     enableDailyFinanceReview: true,
     enableDailyFinanceReviewForAnyDate: true,
     dailyReviewFolder: '',
-    sharedDateRangeState: null
+    sharedDateRangeState: null,
+    language: 'auto',
 };
 
 // Default transactions data
@@ -557,10 +560,12 @@ export default class ExpensicaPlugin extends Plugin {
     async loadSettings() {
         const loadedData = await this.loadData();
         this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
+        setActiveLocale(resolveLocale(this.settings.language, getLanguage()));
         this.normalizeCategorySettings();
     }
 
     async saveSettings(refreshViews = true) {
+        setActiveLocale(resolveLocale(this.settings.language, getLanguage()));
         this.normalizeCategorySettings();
         await this.saveData({
             ...this.settings,
@@ -1677,6 +1682,20 @@ class ExpensicaSettingTab extends PluginSettingTab {
 
         containerEl.empty();
         containerEl.addClass('expensica-settings-container');
+
+        new Setting(containerEl)
+            .setName(t('settings.language.name'))
+            .setDesc(t('settings.language.desc'))
+            .addDropdown(dropdown => dropdown
+                .addOption('auto', t('settings.language.auto'))
+                .addOption('ru', 'Русский')
+                .addOption('en', 'English')
+                .setValue(this.plugin.settings.language)
+                .onChange(async (value) => {
+                    this.plugin.settings.language = value as 'auto' | 'en' | 'ru';
+                    await this.plugin.saveSettings();
+                    this.display();
+                }));
 
         // Add links card at the top
         const linksCard = containerEl.createDiv('expensica-links-card');
