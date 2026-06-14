@@ -2,6 +2,7 @@ import { AccountType, Transaction, TransactionType, formatCurrency, ColorScheme,
 import ExpensicaPlugin from '../../main';
 import * as d3 from 'd3';
 import { renderTransactionCard } from '../transaction-card';
+import { t, localizedDate, localizedNumber, localeTag } from '../i18n';
 
 function getAccountTransactionAmount(plugin: ExpensicaPlugin, transaction: Transaction, accountReference: string): number {
     const account = plugin.findAccountByReference(accountReference);
@@ -71,10 +72,10 @@ function formatRunningBalanceLabel(plugin: ExpensicaPlugin, balance: number, acc
 
     const normalizedSymbol = symbol.replace(/[A-Za-z]+/g, '').trim() || '$';
     const absoluteAmount = Math.abs(balance);
-    const fractionDigits = new Intl.NumberFormat('en-US', {
+    const fractionDigits = localizedNumber(absoluteAmount, {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
-    }).format(absoluteAmount);
+    });
     const sign = balance < 0 ? '-' : '';
     const amount = `${sign}${normalizedSymbol}${fractionDigits}`;
     if (!accountReference) {
@@ -154,9 +155,9 @@ export class CalendarHeatmap {
         
         // Create the details container for transaction details
         this.detailsContainer = this.container.createDiv('expensica-calendar-details-container');
-        this.detailsContainer.createEl('h3', { 
-            text: 'Click on a day to see transactions', 
-            cls: 'expensica-calendar-details-title' 
+        this.detailsContainer.createEl('h3', {
+            text: t('calendar.clickPrompt'),
+            cls: 'expensica-calendar-details-title'
         });
 
         const renderableWidth = this.getRenderableWidth(this.container) ?? this.getNaturalCalendarWidth();
@@ -287,10 +288,10 @@ export class CalendarHeatmap {
     }
 
     private formatDate(date: Date): string {
-        return date.toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric', 
-            year: 'numeric' 
+        return localizedDate(date, {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
         });
     }
 
@@ -364,7 +365,7 @@ export class CalendarHeatmap {
         // Clear SVG
         this.svg.selectAll('*').remove();
         
-        const monthLabel = this.currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        const monthLabel = localizedDate(this.currentDate, { month: 'long', year: 'numeric' });
         
         // Calculate week numbers offset if enabled
         const weekNumbersOffset = this.getWeekNumbersOffset();
@@ -384,8 +385,11 @@ export class CalendarHeatmap {
             .attr('fill', 'var(--text-normal)')
             .text(monthLabel);
         
-        // Days of the week - Shorter Notion-like format
-        const daysOfWeek = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+        // Days of the week - locale-aware narrow names (Sun..Sat).
+        // Aug 1 2021 is a Sunday; iterate seven days for the active locale.
+        const daysOfWeek = Array.from({ length: 7 }, (_, i) =>
+            localizedDate(new Date(2021, 7, 1 + i), { weekday: 'narrow' })
+        );
         
         this.svg.selectAll('.day-of-week')
             .data(daysOfWeek)
@@ -425,7 +429,7 @@ export class CalendarHeatmap {
                 .attr('text-anchor', 'middle')
                 .attr('font-size', '11px')
                 .attr('fill', 'var(--text-faint)')
-                .text('Wk');
+                .text(t('calendar.weekHeader'));
                 
             // Add week numbers
             const weeksInMonth = this.getWeeksInMonth(year, month);
@@ -509,7 +513,7 @@ export class CalendarHeatmap {
                     .style('opacity', .9);
                 
                 const formatCurrencyValue = (value: number) => {
-                    return new Intl.NumberFormat('en-US', {
+                    return new Intl.NumberFormat(localeTag(), {
                         style: 'currency',
                         currency: this.plugin.settings.defaultCurrency
                     }).format(value);
@@ -536,9 +540,9 @@ export class CalendarHeatmap {
                 let comparisonText = '';
                 if (d.totalAmount > 0) {
                     if (parseInt(comparedToAverage) > 20) {
-                        comparisonText = `<div class="tooltip-comparison tooltip-higher">▲ ${comparedToAverage}% above daily average</div>`;
+                        comparisonText = `<div class="tooltip-comparison tooltip-higher">${t('calendar.aboveAverage', { percent: comparedToAverage })}</div>`;
                     } else if (parseInt(comparedToAverage) < -20) {
-                        comparisonText = `<div class="tooltip-comparison tooltip-lower">▼ ${Math.abs(parseInt(comparedToAverage))}% below daily average</div>`;
+                        comparisonText = `<div class="tooltip-comparison tooltip-lower">${t('calendar.belowAverage', { percent: Math.abs(parseInt(comparedToAverage)) })}</div>`;
                     }
                 }
                 
@@ -546,7 +550,7 @@ export class CalendarHeatmap {
                 this.tooltipDiv.html(`
                     <div class="tooltip-title">${d.formattedDate}</div>
                     <div class="tooltip-value">${formatCurrencyValue(d.totalAmount)}</div>
-                    <div class="tooltip-hint">${expenseTransactions.length} expense(s) · ${percentage}% of monthly spend</div>
+                    <div class="tooltip-hint">${t('calendar.tooltipHint', { count: expenseTransactions.length, percentage })}</div>
                     ${comparisonText}
                 `)
                     .style('left', (event.pageX + 10) + 'px')
@@ -643,7 +647,7 @@ export class CalendarHeatmap {
             .attr('fill', (d: DayData) => this.getTextColor(d.totalAmount, colorScale))
             .text((d: DayData) => {
                 const currency = this.plugin.settings.defaultCurrency;
-                return new Intl.NumberFormat('en-US', {
+                return new Intl.NumberFormat(localeTag(), {
                     style: 'currency',
                     currency: currency,
                     notation: 'compact',
@@ -757,7 +761,7 @@ export class CalendarHeatmap {
             .attr('font-size', '13px')
             .attr('font-weight', '500')
             .attr('fill', 'var(--text-normal)')
-            .text('Spending Intensity');
+            .text(t('calendar.legendTitle'));
         
         // Create gradient
         const defs = this.svg.append('defs');
@@ -814,7 +818,7 @@ export class CalendarHeatmap {
             .attr('text-anchor', 'start')
             .attr('font-size', '10px')
             .attr('fill', 'var(--text-faint)')
-            .text('Minimum');
+            .text(t('calendar.legendMin'));
             
         legend.append('text')
             .attr('x', legendWidth)
@@ -822,7 +826,7 @@ export class CalendarHeatmap {
             .attr('text-anchor', 'end')
             .attr('font-size', '10px')
             .attr('fill', 'var(--text-faint)')
-            .text('Maximum');
+            .text(t('calendar.legendMax'));
     }
 
     private showDayDetails(dayData: DayData) {
@@ -839,7 +843,7 @@ export class CalendarHeatmap {
         const dayBalance = dayData.dayBalance;
         
         // Add title with day of week
-        const dayOfWeek = dayData.date.toLocaleDateString('en-US', { weekday: 'long' });
+        const dayOfWeek = localizedDate(dayData.date, { weekday: 'long' });
         this.detailsContainer.createEl('h3', { 
             text: `${dayOfWeek}, ${dayData.formattedDate}`,
             cls: 'expensica-calendar-details-title' 
@@ -850,7 +854,7 @@ export class CalendarHeatmap {
             const emptyStateEl = this.detailsContainer.createDiv('expensica-calendar-empty-state');
             emptyStateEl.createEl('div', { text: '✨', cls: 'expensica-calendar-empty-icon' });
             emptyStateEl.createEl('p', {
-                text: 'No expenses recorded for this day.',
+                text: t('calendar.noExpenses'),
                 cls: 'expensica-calendar-empty-message'
             });
             
@@ -873,7 +877,7 @@ export class CalendarHeatmap {
         });
         
         labelContainer.createSpan({
-            text: 'Total Spent',
+            text: t('calendar.totalSpent'),
             cls: 'expensica-calendar-details-text'
         });
         
@@ -892,7 +896,7 @@ export class CalendarHeatmap {
         });
 
         balanceLabelContainer.createSpan({
-            text: 'Running Balance',
+            text: t('calendar.runningBalance'),
             cls: 'expensica-calendar-details-text'
         });
 
@@ -910,9 +914,9 @@ export class CalendarHeatmap {
             if (monthlyTotal > 0) {
                 const percentage = ((totalExpenses / monthlyTotal) * 100).toFixed(1);
                 const insightEl = summaryContainer.createDiv('expensica-calendar-insight');
-                insightEl.createSpan({ 
-                    text: `This represents ${percentage}% of your monthly spending.`, 
-                    cls: 'expensica-calendar-insight-text' 
+                insightEl.createSpan({
+                    text: t('calendar.monthlyShare', { percentage }),
+                    cls: 'expensica-calendar-insight-text'
                 });
                 
                 // Daily average comparison
@@ -929,31 +933,31 @@ export class CalendarHeatmap {
                     const comparisonEl = summaryContainer.createDiv('expensica-calendar-comparison');
                     
                     if (percentDiff > 0) {
-                        comparisonEl.createSpan({ 
-                            text: `${percentDiff.toFixed(0)}% above `, 
+                        comparisonEl.createSpan({
+                            text: t('calendar.aboveLabel', { percent: percentDiff.toFixed(0) }),
                             cls: 'expensica-trend-down' // Down is bad for expenses
                         });
                     } else {
-                        comparisonEl.createSpan({ 
-                            text: `${Math.abs(percentDiff).toFixed(0)}% below `, 
+                        comparisonEl.createSpan({
+                            text: t('calendar.belowLabel', { percent: Math.abs(percentDiff).toFixed(0) }),
                             cls: 'expensica-trend-up' // Up is good for expenses
                         });
                     }
-                    
-                    comparisonEl.createSpan({ 
-                        text: `your daily average of ${formatCurrency(dailyAverage, this.plugin.settings.defaultCurrency)}`
+
+                    comparisonEl.createSpan({
+                        text: t('calendar.dailyAverageSuffix', { amount: formatCurrency(dailyAverage, this.plugin.settings.defaultCurrency) })
                     });
                 }
                 
                 // Add category breakdown if there are multiple categories
                 const categories = new Map<string, { amount: number; color: string }>();
                 
-                expenseTransactions.forEach(t => {
-                    const category = this.plugin.getCategoryById(t.category);
-                    const categoryName = category ? category.name : 'Other Expenses';
+                expenseTransactions.forEach(tx => {
+                    const category = this.plugin.getCategoryById(tx.category);
+                    const categoryName = category ? category.name : t('calendar.otherExpenses');
                     const categoryColor = category
                         ? this.plugin.getCategoryColor(category.id, category.name)
-                        : this.plugin.getCategoryColor(t.category, categoryName);
+                        : this.plugin.getCategoryColor(tx.category, categoryName);
                     
                     if (!categories.has(categoryName)) {
                         categories.set(categoryName, {
@@ -963,7 +967,7 @@ export class CalendarHeatmap {
                     }
                     
                     const existingCategory = categories.get(categoryName)!;
-                    existingCategory.amount += t.amount;
+                    existingCategory.amount += tx.amount;
                 });
                 
                 if (categories.size > 1) {
@@ -979,9 +983,9 @@ export class CalendarHeatmap {
                     });
                     
                     // Add title text
-                    titleContainer.createEl('h4', { 
-                        text: 'Category Breakdown', 
-                        cls: 'expensica-breakdown-title' 
+                    titleContainer.createEl('h4', {
+                        text: t('calendar.categoryBreakdown'),
+                        cls: 'expensica-breakdown-title'
                     });
                     
                     const breakdownChart = breakdownEl.createDiv('expensica-breakdown-chart');
@@ -1018,7 +1022,7 @@ export class CalendarHeatmap {
         
         // Create transaction list with header
         const transactionHeader = this.detailsContainer.createDiv('expensica-transactions-header');
-        transactionHeader.createEl('h4', { text: 'Expenses', cls: 'expensica-transactions-title' });
+        transactionHeader.createEl('h4', { text: t('calendar.expenses'), cls: 'expensica-transactions-title' });
         
         const transactionList = this.detailsContainer.createDiv('expensica-calendar-transaction-list');
         

@@ -312,6 +312,30 @@ export const en = {
     heatmapTitle: 'Spending Heatmap Calendar',
     today: 'Today',
   },
+  calendar: {
+    clickPrompt: 'Click on a day to see transactions',
+    weekHeader: 'Wk',
+    legendTitle: 'Spending Intensity',
+    legendMin: 'Minimum',
+    legendMax: 'Maximum',
+    tooltipHint: {
+      one: '{count} expense · {percentage}% of monthly spend',
+      few: '{count} expenses · {percentage}% of monthly spend',
+      many: '{count} expenses · {percentage}% of monthly spend',
+    } as PluralForms,
+    aboveAverage: '▲ {percent}% above daily average',
+    belowAverage: '▼ {percent}% below daily average',
+    noExpenses: 'No expenses recorded for this day.',
+    totalSpent: 'Total Spent',
+    runningBalance: 'Running Balance',
+    monthlyShare: 'This represents {percentage}% of your monthly spending.',
+    aboveLabel: '{percent}% above ',
+    belowLabel: '{percent}% below ',
+    dailyAverageSuffix: 'your daily average of {amount}',
+    categoryBreakdown: 'Category Breakdown',
+    expenses: 'Expenses',
+    otherExpenses: 'Other Expenses',
+  },
 };
 
 export type Messages = typeof en;
