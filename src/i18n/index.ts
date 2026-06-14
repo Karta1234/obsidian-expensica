@@ -36,6 +36,7 @@ function isPluralForms(value: unknown): value is PluralForms {
     !!value &&
     typeof value === 'object' &&
     'one' in (value as object) &&
+    'few' in (value as object) &&
     'many' in (value as object)
   );
 }
@@ -57,5 +58,6 @@ export function t(key: string, params?: Params): string {
 
 // Заглушка плюрализации — полноценно реализуется в Task 3.
 function interpolatePlural(forms: PluralForms, params?: Params): string {
+  // TODO(Task 3): заменить на CLDR-выбор формы через Intl.PluralRules
   return interpolate(forms.many, params);
 }

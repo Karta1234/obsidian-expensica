@@ -18,8 +18,13 @@ describe('t() lookup, fallback, interpolation', () => {
     expect(t('nope.missing.key')).toBe('nope.missing.key');
   });
 
-  it('подставляет параметры в {placeholder}', () => {
+  it('параметры игнорируются, если в строке нет плейсхолдера', () => {
     setActiveLocale('en');
     expect(t('common.save', { unused: 'x' })).toBe('Save');
+  });
+
+  it('подставляет параметры в {placeholder}', () => {
+    setActiveLocale('en');
+    expect(t('tx.count', { count: 5 })).toBe('5 transactions');
   });
 });
