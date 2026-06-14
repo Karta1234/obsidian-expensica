@@ -56,8 +56,11 @@ export function t(key: string, params?: Params): string {
   return key; // фолбэк: ключ не найден нигде
 }
 
-// Заглушка плюрализации — полноценно реализуется в Task 3.
 function interpolatePlural(forms: PluralForms, params?: Params): string {
-  // TODO(Task 3): заменить на CLDR-выбор формы через Intl.PluralRules
-  return interpolate(forms.many, params);
+  const count = typeof params?.count === 'number' ? params.count : 0;
+  const localeTag = activeLocale === 'ru' ? 'ru-RU' : 'en-US';
+  const category = new Intl.PluralRules(localeTag).select(count);
+  const form =
+    category === 'one' ? forms.one : category === 'few' ? forms.few : forms.many;
+  return interpolate(form, params);
 }

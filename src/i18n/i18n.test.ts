@@ -28,3 +28,29 @@ describe('t() lookup, fallback, interpolation', () => {
     expect(t('tx.count', { count: 5 })).toBe('5 transactions');
   });
 });
+
+describe('плюрализация (русский)', () => {
+  beforeEach(() => setActiveLocale('ru'));
+
+  it('count=1 -> форма one', () => {
+    expect(t('tx.count', { count: 1 })).toBe('1 транзакция');
+  });
+
+  it('count=2 -> форма few', () => {
+    expect(t('tx.count', { count: 2 })).toBe('2 транзакции');
+  });
+
+  it('count=5 -> форма many', () => {
+    expect(t('tx.count', { count: 5 })).toBe('5 транзакций');
+  });
+
+  it('count=21 -> форма one', () => {
+    expect(t('tx.count', { count: 21 })).toBe('21 транзакция');
+  });
+
+  it('english: count=1 -> one, count=3 -> many-слот', () => {
+    setActiveLocale('en');
+    expect(t('tx.count', { count: 1 })).toBe('1 transaction');
+    expect(t('tx.count', { count: 3 })).toBe('3 transactions');
+  });
+});
