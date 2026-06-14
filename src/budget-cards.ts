@@ -1,4 +1,4 @@
-import { type Budget, formatCurrency } from './models';
+import { type Budget, BudgetPeriod, formatCurrency } from './models';
 import { t } from './i18n';
 
 interface BudgetCardOptions {
@@ -100,7 +100,16 @@ export function renderBudgetCard(container: HTMLElement, options: BudgetCardOpti
 }
 
 function formatBudgetPeriodLabel(periodLabel: string): string {
-    return periodLabel.charAt(0).toUpperCase() + periodLabel.slice(1).toLowerCase();
+    switch (periodLabel) {
+        case BudgetPeriod.MONTHLY:
+            return t('budget.periodMonthly');
+        case BudgetPeriod.QUARTERLY:
+            return t('budget.periodQuarterly');
+        case BudgetPeriod.YEARLY:
+            return t('budget.periodYearly');
+        default:
+            return t('budget.periodMonthly');
+    }
 }
 
 function formatCompactCurrency(amount: number, currencyCode: string): string {

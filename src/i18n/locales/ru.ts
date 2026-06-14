@@ -5,8 +5,6 @@ export const ru: Messages = {
     save: 'Сохранить',
     cancel: 'Отмена',
     delete: 'Удалить',
-    edit: 'Изменить',
-    close: 'Закрыть',
     update: 'Обновить',
     name: 'Название',
   },

@@ -13,8 +13,6 @@ export const en = {
     save: 'Save',
     cancel: 'Cancel',
     delete: 'Delete',
-    edit: 'Edit',
-    close: 'Close',
     update: 'Update',
     name: 'Name',
   },

@@ -5,7 +5,7 @@ import Chart from 'chart.js/auto';
 import type { ArcElement, Chart as ChartJS, Plugin as ChartPlugin } from 'chart.js';
 import { 
     Transaction, Category, TransactionType, CategoryType, Currency, ColorScheme,
-    formatCurrency, formatDate, formatTime, parseLocalDate, getMonthName, getYear, generateId, TransactionAggregator,
+    formatCurrency, formatDate, formatTime, parseLocalDate, generateId, TransactionAggregator,
     Budget, BudgetPeriod, calculateBudgetStatus, getCurrencyByCode, getCategoryColor as getDefaultCategoryColor, sortTransactionsByDateTimeDesc,
     getTransactionDisplayTime, getTransactionTime, ColorPalette,
     Account, AccountType, getAccountTypeLabel, parseAccountReference, formatAccountReference, normalizeAccountName, getAccountEmoji,
