@@ -21,7 +21,7 @@ import { showExpensicaNotice } from './notice';
 import { renderTransactionCard, showTransactionBulkCategoryMenu } from './transaction-card';
 import { renderCategoryChip } from './category-chip';
 import { showCategoryQuickMenu } from './category-quick-menu';
-import { t, localizedDate } from './i18n';
+import { t, localizedDate, localizedNumber, localeTag } from './i18n';
 
 function getAccountTransactionAmount(plugin: ExpensicaPlugin, transaction: Transaction, accountReference: string): number {
     const account = plugin.findAccountByReference(accountReference);
@@ -91,10 +91,10 @@ function formatRunningBalanceLabel(plugin: ExpensicaPlugin, balance: number, acc
 
     const normalizedSymbol = symbol.replace(/[A-Za-z]+/g, '').trim() || '$';
     const absoluteAmount = Math.abs(balance);
-    const fractionDigits = new Intl.NumberFormat('en-US', {
+    const fractionDigits = localizedNumber(absoluteAmount, {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
-    }).format(absoluteAmount);
+    });
     const sign = balance < 0 ? '-' : '';
     const amount = `${sign}${normalizedSymbol}${fractionDigits}`;
     if (!accountReference) {
@@ -691,7 +691,7 @@ export class ExpensicaTransactionsView implements TransactionView {
         const displaySymbol = configuredSymbol.includes('$') ? '$' : configuredSymbol;
 
         try {
-            return new Intl.NumberFormat('en-US', {
+            return new Intl.NumberFormat(localeTag(), {
                 style: 'currency',
                 currency: currencyCode,
                 currencyDisplay: 'symbol'
