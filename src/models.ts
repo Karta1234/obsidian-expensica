@@ -42,6 +42,7 @@ export enum CategoryType {
     createdAt: string;
     color?: string;
     creditLimit?: number;
+    openingBalance?: number;
     isDefault?: boolean;
   }
 

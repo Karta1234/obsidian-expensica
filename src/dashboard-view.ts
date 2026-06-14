@@ -24,7 +24,7 @@ import { renderCategoryCards } from './categories-cards';
 import { EmojiPickerModal } from './emoji-picker-modal';
 import { showCategoryQuickMenu } from './category-quick-menu';
 import { getLastAccountTransaction, renderAccountCard, renderCreateAccountCard } from './account-card';
-import { isStartingBalanceActive } from './balance';
+import { accountBalanceFromAmounts } from './balance';
 
 // Extend the plugin interface to include the new method
 declare module '../main' {
@@ -180,10 +180,9 @@ function getAccountTransactionAmount(plugin: ExpensicaPlugin, transaction: Trans
 }
 
 function getAccountRunningBalance(plugin: ExpensicaPlugin, accountReference: string, transactions: Transaction[]): number {
-    return transactions.reduce(
-        (balance, transaction) => normalizeBalanceValue(balance + getAccountTransactionAmount(plugin, transaction, accountReference)),
-        0
-    );
+    const openingBalance = plugin.findAccountByReference(accountReference)?.openingBalance ?? 0;
+    const amounts = transactions.map(transaction => getAccountTransactionAmount(plugin, transaction, accountReference));
+    return normalizeBalanceValue(accountBalanceFromAmounts(openingBalance, amounts));
 }
 
 function getRunningBalanceByTransactionIdForAccount(
@@ -191,7 +190,7 @@ function getRunningBalanceByTransactionIdForAccount(
     accountReference: string,
     transactions: Transaction[]
 ): Record<string, number> {
-    let runningBalance = 0;
+    let runningBalance = plugin.findAccountByReference(accountReference)?.openingBalance ?? 0;
 
     return sortTransactionsByDateTimeDesc(transactions)
         .reverse()
@@ -1725,13 +1724,14 @@ export class ExpensicaDashboardView extends ItemView {
     }
 
     getAccountBalanceThroughDateTime(accountReference: string, endDate: Date): number {
+        const openingBalance = this.plugin.findAccountByReference(accountReference)?.openingBalance ?? 0;
         return this.plugin.getAllTransactions().reduce((balance, transaction) => {
             if (this.getTransactionDateTime(transaction) > endDate) {
                 return balance;
             }
 
             return normalizeBalanceValue(balance + getAccountTransactionAmount(this.plugin, transaction, accountReference));
-        }, 0);
+        }, openingBalance);
     }
 
     getNetBalanceThrough(endDate: Date): number {
@@ -1742,13 +1742,8 @@ export class ExpensicaDashboardView extends ItemView {
             return transactionDate <= normalizedEndDate;
         });
 
-        const startingContribution = isStartingBalanceActive(
-            this.plugin.settings.startingBalanceDate,
-            normalizedEndDate
-        ) ? (this.plugin.settings.startingBalance ?? 0) : 0;
-
         if (!this.plugin.settings.enableAccounts) {
-            const flow = transactionsThroughDate.reduce((balance, transaction) => {
+            return transactionsThroughDate.reduce((balance, transaction) => {
                 if (transaction.type === TransactionType.INCOME) {
                     return balance + transaction.amount;
                 }
@@ -1757,10 +1752,9 @@ export class ExpensicaDashboardView extends ItemView {
                     ? balance - transaction.amount
                     : balance;
             }, 0);
-            return flow + startingContribution;
         }
 
-        const accountsNet = this.plugin.getAccounts().reduce((netBalance, account) => {
+        return this.plugin.getAccounts().reduce((netBalance, account) => {
             const accountReference = this.plugin.normalizeTransactionAccountReference(
                 formatAccountReference(account.type, account.name)
             );
@@ -1768,8 +1762,6 @@ export class ExpensicaDashboardView extends ItemView {
 
             return netBalance + (account.type === AccountType.CREDIT ? -accountBalance : accountBalance);
         }, 0);
-
-        return accountsNet + startingContribution;
     }
 
     getPreviousMonthEndDate(): Date {
@@ -2398,9 +2390,7 @@ export class ExpensicaDashboardView extends ItemView {
             const accountReference = formatAccountReference(account.type, account.name);
             const accountTransactions = allTransactions.filter(transaction => getAccountTransactionAmount(this.plugin, transaction, accountReference) !== 0);
             const lastTransaction = getLastAccountTransaction(accountTransactions);
-            const runningBalance = accountTransactions.reduce((balance, transaction) => (
-                normalizeBalanceValue(balance + getAccountTransactionAmount(this.plugin, transaction, accountReference))
-            ), 0);
+            const runningBalance = getAccountRunningBalance(this.plugin, accountReference, accountTransactions);
 
             renderAccountCard(accountsList, {
                 account,
@@ -3631,11 +3621,15 @@ export class ExpensicaDashboardView extends ItemView {
             .slice()
             .sort((a, b) => this.getTransactionDateTime(a).getTime() - this.getTransactionDateTime(b).getTime());
         const runningAccountBalances = accountReferences.reduce((balances, reference) => {
-            balances[reference] = 0;
+            balances[reference] = this.plugin.findAccountByReference(reference)?.openingBalance ?? 0;
             return balances;
         }, {} as Record<string, number>);
         let transactionIndex = 0;
-        let runningNetBalance = 0;
+        let runningNetBalance = accountReferences.reduce((sum, reference) => {
+            const account = this.plugin.findAccountByReference(reference);
+            const opening = account?.openingBalance ?? 0;
+            return sum + (account?.type === AccountType.CREDIT ? -opening : opening);
+        }, 0);
 
         buckets.forEach(bucket => {
             while (
@@ -6802,6 +6796,23 @@ class AccountModal extends Modal {
         typeSelect.addEventListener('change', syncCreditLimitVisibility);
         syncCreditLimitVisibility();
 
+        const openingBalanceGroup = form.createDiv('expensica-form-group');
+        openingBalanceGroup.createEl('label', {
+            text: 'Opening balance',
+            cls: 'expensica-form-label',
+            attr: { for: 'opening-balance' }
+        });
+        const openingBalanceInput = openingBalanceGroup.createEl('input', {
+            cls: 'expensica-form-input expensica-edit-field',
+            attr: {
+                id: 'opening-balance',
+                name: 'opening-balance',
+                type: 'number',
+                step: '0.01',
+                placeholder: '0.00'
+            }
+        });
+
         const formFooter = form.createDiv('expensica-form-footer');
         const cancelBtn = formFooter.createEl('button', {
             text: 'Cancel',
@@ -6839,7 +6850,8 @@ class AccountModal extends Modal {
                 createdAt: new Date().toISOString(),
                 creditLimit: accountType === AccountType.CREDIT && creditLimitInput.value
                     ? Number(creditLimitInput.value)
-                    : undefined
+                    : undefined,
+                openingBalance: openingBalanceInput.value ? Number(openingBalanceInput.value) : undefined
             }, this.dashboardView);
 
             await this.dashboardView.loadTransactionsData();
@@ -7091,6 +7103,26 @@ class AccountEditorModal extends Modal {
         let creditLimitGroup: HTMLDivElement | null = null;
         let creditLimitInput: HTMLInputElement | null = null;
 
+        const openingBalanceGroup = form.createDiv('expensica-form-group');
+        openingBalanceGroup.createEl('label', {
+            text: 'Opening balance',
+            cls: 'expensica-form-label',
+            attr: { for: 'opening-balance' }
+        });
+        const openingBalanceInput = openingBalanceGroup.createEl('input', {
+            cls: 'expensica-form-input expensica-edit-field',
+            attr: {
+                id: 'opening-balance',
+                name: 'opening-balance',
+                type: 'number',
+                step: '0.01',
+                placeholder: '0.00'
+            }
+        });
+        openingBalanceInput.value = typeof this.account?.openingBalance === 'number'
+            ? this.account.openingBalance.toString()
+            : '';
+
         const ensureCreditLimitField = (type: AccountType) => {
             if (type !== AccountType.CREDIT) {
                 creditLimitGroup?.remove();
@@ -7247,6 +7279,7 @@ class AccountEditorModal extends Modal {
             if (accountType === AccountType.CREDIT && creditLimitInput?.value) {
                 nextAccount.creditLimit = Number(creditLimitInput.value);
             }
+            nextAccount.openingBalance = openingBalanceInput.value ? Number(openingBalanceInput.value) : undefined;
 
             if (
                 this.account
