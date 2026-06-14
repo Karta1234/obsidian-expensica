@@ -31,7 +31,6 @@ export const ru: Messages = {
     currency: {
       name: 'Валюта по умолчанию',
       desc: 'Выберите валюту для всех транзакций.',
-      ariaLabel: 'Выбрать цветовую схему календаря',
       searchPlaceholder: 'Поиск валют...',
     },
     timeFormat: {
@@ -43,6 +42,7 @@ export const ru: Messages = {
     colorScheme: {
       name: 'Цветовая схема календаря',
       desc: 'Выберите цветовую схему для отображения календаря.',
+      ariaLabel: 'Выбрать цветовую схему календаря',
       red: 'Красная',
       blue: 'Синяя',
       green: 'Зелёная',
@@ -112,7 +112,7 @@ export const ru: Messages = {
     chooseColor: 'Выбрать цвет',
     creditLimit: 'Кредитный лимит',
     openingBalance: 'Начальный баланс',
-    typeChequing: 'Расчётный',
+    typeChequing: 'Текущий',
     typeSaving: 'Накопительный',
     typeCredit: 'Кредитный',
     typeOther: 'Другой',
@@ -123,7 +123,6 @@ export const ru: Messages = {
     updateTitle: 'Обновить счёт?',
     updateMessage: 'Это изменит историю транзакций. Вы уверены, что хотите изменить данные счёта?',
     updateConfirm: 'Да',
-    mustHaveOneCategory: 'У вас должна быть хотя бы одна категория типа «{type}»',
     fromAccount: 'Счёт списания',
     toAccount: 'Счёт зачисления',
     editTitle: 'Изменить счёт «{type}»',
@@ -153,6 +152,7 @@ export const ru: Messages = {
     deletedHint: 'Эта категория была удалена. Измените транзакцию, чтобы выбрать новую категорию.',
     cannotChange: 'Эту категорию нельзя изменить',
     otherExpenses: 'Прочие расходы',
+    mustHaveOneCategory: 'У вас должна быть хотя бы одна категория типа «{type}»',
   },
   budget: {
     spent: 'Потрачено {amount}',
@@ -451,7 +451,6 @@ export const ru: Messages = {
     apply: 'Применить',
     startAfterEnd: 'Дата начала не может быть позже даты окончания',
     selectBothDates: 'Выберите дату начала и дату окончания',
-    rollover: 'Переносить неизрасходованный бюджет на следующий период',
   },
   calendar: {
     clickPrompt: 'Нажмите на день, чтобы увидеть транзакции',

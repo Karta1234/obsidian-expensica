@@ -7473,7 +7473,7 @@ class CategoryModal extends Modal {
                 const typeWord = this.category.type === CategoryType.INCOME
                     ? t('tx.typeIncome')
                     : t('tx.typeExpenses');
-                showExpensicaNotice(t('account.mustHaveOneCategory', { type: typeWord }));
+                showExpensicaNotice(t('category.mustHaveOneCategory', { type: typeWord }));
                 return;
             }
 

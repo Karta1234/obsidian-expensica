@@ -1813,7 +1813,7 @@ class ExpensicaSettingTab extends PluginSettingTab {
                 // Create the select display
                 const selectDisplay = container.createEl('button', {
                     cls: 'expensica-select-display expensica-standard-button expensica-settings-select-button',
-                    attr: { type: 'button', 'aria-label': t('settings.currency.ariaLabel') }
+                    attr: { type: 'button', 'aria-label': t('settings.colorScheme.ariaLabel') }
                 });
                 const previewColor = this.getColorPreview(this.plugin.settings.calendarColorScheme);
                 const colorPreview = selectDisplay.createDiv('color-preview color-preview-bg');

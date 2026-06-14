@@ -39,7 +39,6 @@ export const en = {
     currency: {
       name: 'Default Currency',
       desc: 'Select the currency to use for all transactions.',
-      ariaLabel: 'Select calendar color scheme',
       searchPlaceholder: 'Search currencies...',
     },
     timeFormat: {
@@ -51,6 +50,7 @@ export const en = {
     colorScheme: {
       name: 'Calendar Color Scheme',
       desc: 'Select the color scheme for the calendar visualization.',
+      ariaLabel: 'Select calendar color scheme',
       red: 'Red',
       blue: 'Blue',
       green: 'Green',
@@ -131,7 +131,6 @@ export const en = {
     updateTitle: 'Update Account?',
     updateMessage: 'This will alter the transaction history, are you sure you want to change the account details?',
     updateConfirm: 'Yes',
-    mustHaveOneCategory: 'You must have at least one {type} category',
     fromAccount: 'From Account',
     toAccount: 'To Account',
     editTitle: 'Edit {type} Account',
@@ -161,6 +160,7 @@ export const en = {
     deletedHint: 'This category was deleted. Edit the transaction to select a new category.',
     cannotChange: 'You cannot change this category',
     otherExpenses: 'Other Expenses',
+    mustHaveOneCategory: 'You must have at least one {type} category',
   },
   budget: {
     spent: 'Spent {amount}',
@@ -465,7 +465,6 @@ export const en = {
     apply: 'Apply',
     startAfterEnd: 'Start date cannot be after end date',
     selectBothDates: 'Please select both start and end dates',
-    rollover: 'Roll over unspent budget to next period',
     // Category select chart type values reuse tx.typeIncome/typeExpenses
   },
   calendar: {
