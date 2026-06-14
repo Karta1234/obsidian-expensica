@@ -1,4 +1,4 @@
-import { Messages, PluralForms } from './en';
+import type { Messages, PluralForms } from './en';
 
 export const ru: Messages = {
   common: {
