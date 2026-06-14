@@ -109,6 +109,13 @@ export const en = {
   account: {
     runningBalance: 'Running Balance',
   },
+  errors: {
+    accountExists: 'Account already exists',
+    accountNotFound: 'Account not found',
+    defaultAccountCannotBeCredit: 'Default account cannot be credit',
+    categoryExists: 'Category already exists',
+    categoryNameReserved: 'Category name "{name}" is reserved',
+  },
   commands: {
     addExpense: 'Add New Expense',
     addIncome: 'Add New Income',

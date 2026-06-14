@@ -96,6 +96,10 @@ const LEADING_CATEGORY_EMOJI_PATTERN = /^([\p{Extended_Pictographic}\uFE0F\u200D
 const INTERNAL_CATEGORY_NAME = DEFAULT_CATEGORIES.find(category => category.id === INTERNAL_CATEGORY_ID)?.name || 'Internal';
 const DEFAULT_CATEGORY_IDS = new Set(DEFAULT_CATEGORIES.map(category => category.id));
 const LEGACY_UNKNOWN_CATEGORY_IDS = new Set(['unknown', 'unknown_category', 'unknown category']);
+// Stable, non-localized basename for Daily Finance Review note filenames. MUST NOT be localized:
+// the on-disk filename has to stay constant across language switches so existing notes are matched
+// and updated (not orphaned). Only the in-note heading and Notices are localized.
+const REVIEW_NOTE_BASENAME = 'Daily Finance Review';
 
 // Define a separate interface for our transactions data
 interface TransactionsData {
@@ -787,14 +791,14 @@ export default class ExpensicaPlugin extends Plugin {
     async addCategory(category: Category): Promise<void> {
         const normalizedName = this.normalizeCategoryName(category.name).name;
         if (this.isReservedCategoryName(category.id, normalizedName)) {
-            throw new Error(`Category name "${INTERNAL_CATEGORY_NAME}" is reserved`);
+            throw new Error(t('errors.categoryNameReserved', { name: INTERNAL_CATEGORY_NAME }));
         }
         const duplicate = this.settings.categories.find(existing =>
             existing.type === category.type
             && this.normalizeCategoryName(existing.name).name.toLowerCase() === normalizedName.toLowerCase()
         );
         if (duplicate) {
-            throw new Error('Category already exists');
+            throw new Error(t('errors.categoryExists'));
         }
 
         this.settings.categories.push({
@@ -825,7 +829,7 @@ export default class ExpensicaPlugin extends Plugin {
         if (index !== -1) {
             const normalizedName = this.normalizeCategoryName(updatedCategory.name).name;
             if (this.isReservedCategoryName(updatedCategory.id, normalizedName)) {
-                throw new Error(`Category name "${INTERNAL_CATEGORY_NAME}" is reserved`);
+                throw new Error(t('errors.categoryNameReserved', { name: INTERNAL_CATEGORY_NAME }));
             }
             const duplicate = this.settings.categories.find(existing =>
                 existing.id !== updatedCategory.id
@@ -833,7 +837,7 @@ export default class ExpensicaPlugin extends Plugin {
                 && this.normalizeCategoryName(existing.name).name.toLowerCase() === normalizedName.toLowerCase()
             );
             if (duplicate) {
-                throw new Error('Category already exists');
+                throw new Error(t('errors.categoryExists'));
             }
 
             this.settings.categories[index] = {
@@ -1011,14 +1015,14 @@ export default class ExpensicaPlugin extends Plugin {
             && formatAccountReference(existing.type, existing.name) !== previousReference
         );
         if (duplicateAccount) {
-            throw new Error('Account already exists');
+            throw new Error(t('errors.accountExists'));
         }
 
         const index = this.transactionsData.accounts.findIndex(existing =>
             formatAccountReference(existing.type, existing.name) === previousReference
         );
         if (index === -1) {
-            throw new Error('Account not found');
+            throw new Error(t('errors.accountNotFound'));
         }
 
         const updatedAccount: Account = {
@@ -1028,7 +1032,7 @@ export default class ExpensicaPlugin extends Plugin {
             color: normalizePaletteColor(account.color ?? this.transactionsData.accounts[index].color) || undefined
         };
         if (updatedAccount.isDefault && updatedAccount.type === AccountType.CREDIT) {
-            throw new Error('Default account cannot be credit');
+            throw new Error(t('errors.defaultAccountCannotBeCredit'));
         }
 
         if (updatedAccount.type !== AccountType.CREDIT) {
@@ -1065,7 +1069,7 @@ export default class ExpensicaPlugin extends Plugin {
             formatAccountReference(account.type, account.name) === accountReference
         );
         if (index === -1) {
-            throw new Error('Account not found');
+            throw new Error(t('errors.accountNotFound'));
         }
 
         this.transactionsData.accounts.splice(index, 1);
@@ -1350,6 +1354,9 @@ export default class ExpensicaPlugin extends Plugin {
             
             // Format today's date for the note title
             const dateStr = formatDate(now);
+            // Stable, non-localized filename base (keeps notes matchable across language switches)
+            const noteFileBase = `${REVIEW_NOTE_BASENAME} - ${dateStr}`;
+            // Localized title for the in-note heading and Notices only
             const noteTitle = `${t('review.titlePrefix')} - ${dateStr}`;
 
             // Generate note content
@@ -1457,11 +1464,11 @@ export default class ExpensicaPlugin extends Plugin {
                 }
             }
             
-            // Determine note path
-            const notePath = this.settings.dailyReviewFolder 
-                ? `${this.settings.dailyReviewFolder}/${noteTitle}.md`
-                : `${noteTitle}.md`;
-            
+            // Determine note path (stable, non-localized basename)
+            const notePath = this.settings.dailyReviewFolder
+                ? `${this.settings.dailyReviewFolder}/${noteFileBase}.md`
+                : `${noteFileBase}.md`;
+
             // Look for existing note
             const existingNote = files.find(file => file.path === notePath);
             
@@ -1502,6 +1509,9 @@ export default class ExpensicaPlugin extends Plugin {
                 
                 // Format the date for the note title
                 const dateStr = formatDate(selectedDate);
+                // Stable, non-localized filename base (keeps notes matchable across language switches)
+                const noteFileBase = `${REVIEW_NOTE_BASENAME} - ${dateStr}`;
+                // Localized title for the in-note heading and Notices only
                 const noteTitle = `${t('review.titlePrefix')} - ${dateStr}`;
 
                 // Generate note content
@@ -1590,11 +1600,11 @@ export default class ExpensicaPlugin extends Plugin {
                     }
                 }
                 
-                // Determine note path
-                const notePath = this.settings.dailyReviewFolder 
-                    ? `${this.settings.dailyReviewFolder}/${noteTitle}.md`
-                    : `${noteTitle}.md`;
-                
+                // Determine note path (stable, non-localized basename)
+                const notePath = this.settings.dailyReviewFolder
+                    ? `${this.settings.dailyReviewFolder}/${noteFileBase}.md`
+                    : `${noteFileBase}.md`;
+
                 // Look for existing note
                 const existingNote = files.find(file => file.path === notePath);
                 

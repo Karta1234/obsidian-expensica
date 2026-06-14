@@ -101,6 +101,13 @@ export const ru: Messages = {
   account: {
     runningBalance: 'Текущий баланс',
   },
+  errors: {
+    accountExists: 'Счёт уже существует',
+    accountNotFound: 'Счёт не найден',
+    defaultAccountCannotBeCredit: 'Счёт по умолчанию не может быть кредитным',
+    categoryExists: 'Категория уже существует',
+    categoryNameReserved: 'Имя категории «{name}» зарезервировано',
+  },
   commands: {
     addExpense: 'Добавить расход',
     addIncome: 'Добавить доход',
