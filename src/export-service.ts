@@ -118,7 +118,7 @@ export class ExportService {
   /**
    * Generate PDF data from transactions
    */
-  public static generatePDF(transactions: Transaction[], categories: Category[], currency: string = 'USD'): Uint8Array {
+  public static generatePDF(transactions: Transaction[], categories: Category[]): Uint8Array {
     try {
       // Create a new PDF document
       const jsPdfConstructor = getJsPDF();

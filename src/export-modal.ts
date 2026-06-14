@@ -238,9 +238,8 @@ export class ExportModal extends Modal {
         mimeType = 'application/json';
       } else {
         exportData = ExportService.generatePDF(
-          filteredTransactions, 
-          this.plugin.settings.categories,
-          this.plugin.settings.defaultCurrency
+          filteredTransactions,
+          this.plugin.settings.categories
         );
         mimeType = 'application/pdf';
       }
