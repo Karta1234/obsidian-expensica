@@ -56,10 +56,25 @@ export function t(key: string, params?: Params): string {
   return key; // фолбэк: ключ не найден нигде
 }
 
+export function localeTag(): string {
+  return activeLocale === 'ru' ? 'ru-RU' : 'en-US';
+}
+
+export function localizedDate(date: Date, options?: Intl.DateTimeFormatOptions): string {
+  return date.toLocaleDateString(localeTag(), options);
+}
+
+export function localizedMonthYear(date: Date): string {
+  return date.toLocaleDateString(localeTag(), { month: 'long', year: 'numeric' });
+}
+
+export function localizedNumber(value: number, options?: Intl.NumberFormatOptions): string {
+  return value.toLocaleString(localeTag(), options);
+}
+
 function interpolatePlural(forms: PluralForms, params?: Params): string {
   const count = typeof params?.count === 'number' ? params.count : 0;
-  const localeTag = activeLocale === 'ru' ? 'ru-RU' : 'en-US';
-  const category = new Intl.PluralRules(localeTag).select(count);
+  const category = new Intl.PluralRules(localeTag()).select(count);
   const form =
     category === 'one' ? forms.one : category === 'few' ? forms.few : forms.many;
   return interpolate(form, params);

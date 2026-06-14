@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { t, setActiveLocale, resolveLocale } from './index';
+import { t, setActiveLocale, resolveLocale, localizedDate, localizedMonthYear, localeTag } from './index';
 
 describe('t() lookup, fallback, interpolation', () => {
   beforeEach(() => setActiveLocale('ru'));
@@ -74,5 +74,28 @@ describe('resolveLocale', () => {
     expect(resolveLocale('auto', 'ru-RU')).toBe('ru');
     expect(resolveLocale('auto', 'RU')).toBe('ru');
     expect(resolveLocale('auto', 'en-GB')).toBe('en');
+  });
+});
+
+describe('форматтеры', () => {
+  it('localeTag отражает активную локаль', () => {
+    setActiveLocale('ru');
+    expect(localeTag()).toBe('ru-RU');
+    setActiveLocale('en');
+    expect(localeTag()).toBe('en-US');
+  });
+
+  it('localizedMonthYear на русском', () => {
+    setActiveLocale('ru');
+    const d = new Date(2026, 5, 14); // июнь 2026
+    expect(localizedMonthYear(d)).toContain('июн');
+    expect(localizedMonthYear(d)).toContain('2026');
+  });
+
+  it('localizedDate использует активную локаль', () => {
+    setActiveLocale('en');
+    const d = new Date(2026, 5, 14);
+    const out = localizedDate(d, { month: 'long', day: 'numeric' });
+    expect(out).toContain('June');
   });
 });
