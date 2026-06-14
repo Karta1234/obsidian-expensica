@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { t, setActiveLocale, resolveLocale, localizedDate, localizedMonthYear, localeTag } from './index';
+import { t, setActiveLocale, resolveLocale, localizedDate, localizedMonthYear, localizedNumber, localeTag } from './index';
 
 describe('t() lookup, fallback, interpolation', () => {
   beforeEach(() => setActiveLocale('ru'));
@@ -97,5 +97,12 @@ describe('форматтеры', () => {
     const d = new Date(2026, 5, 14);
     const out = localizedDate(d, { month: 'long', day: 'numeric' });
     expect(out).toContain('June');
+  });
+
+  it('localizedNumber использует разделители активной локали', () => {
+    setActiveLocale('ru');
+    expect(localizedNumber(1234.5)).toContain(','); // десятичная запятая в ru-RU
+    setActiveLocale('en');
+    expect(localizedNumber(1234.5)).toContain('.'); // десятичная точка в en-US
   });
 });
