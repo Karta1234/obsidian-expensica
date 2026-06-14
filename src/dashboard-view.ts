@@ -2990,8 +2990,8 @@ export class ExpensicaDashboardView extends ItemView {
         
         currentSelection.appendChild(calendarSvg);
         
-        const dateRangeText = currentSelection.createSpan({ 
-            text: this.dateRange.label,
+        const dateRangeText = currentSelection.createSpan({
+            text: this.getDateRangeDisplayLabel(this.dateRange),
             cls: 'shadcn-date-range-text'
         });
         
@@ -3032,7 +3032,7 @@ export class ExpensicaDashboardView extends ItemView {
             // Handle option selection
             optionItem.addEventListener('click', async () => {
                 await this.applyDateRangeSelection(option.type);
-                dateRangeText.textContent = this.dateRange.label;
+                dateRangeText.textContent = this.getDateRangeDisplayLabel(this.dateRange);
                 
                 // Hide the dropdown and reset icon rotation
                 optionsContainer.addClass('shadcn-date-range-hidden');
@@ -3063,17 +3063,44 @@ export class ExpensicaDashboardView extends ItemView {
         });
     }
 
+    // Resolve the terse date-range button caption for a given type at render time,
+    // so it re-localizes whenever the dashboard re-renders after a language switch.
+    private getDateRangeTypeLabel(type: DateRangeType): string {
+        switch (type) {
+            case DateRangeType.TODAY: return t('dashboard.rangeToday');
+            case DateRangeType.THIS_WEEK: return t('dashboard.rangeThisWeek');
+            case DateRangeType.LAST_WEEK: return t('dashboard.rangeLastWeek');
+            case DateRangeType.THIS_MONTH: return t('dashboard.rangeThisMonth');
+            case DateRangeType.LAST_MONTH: return t('dashboard.rangeLastMonth');
+            case DateRangeType.THIS_YEAR: return t('dashboard.rangeThisYear');
+            case DateRangeType.LAST_YEAR: return t('dashboard.rangeLastYear');
+            case DateRangeType.ALL_TIME: return t('dashboard.rangeAll');
+            case DateRangeType.CUSTOM: return t('dashboard.rangeCustom');
+            default: return t('dashboard.rangeCustom');
+        }
+    }
+
+    // Display label for the currently selected range. For CUSTOM with concrete
+    // dates the stored label is a (already localized) date range string and is
+    // kept as-is; for every other type the abbreviation is resolved fresh via t().
+    private getDateRangeDisplayLabel(range: DateRange): string {
+        if (range.type === DateRangeType.CUSTOM && range.label !== DATE_RANGE_LABEL_CUSTOM_RANGE) {
+            return range.label;
+        }
+        return this.getDateRangeTypeLabel(range.type);
+    }
+
     private getDateRangeOptions(): { type: DateRangeType; label: string }[] {
         return [
-            { type: DateRangeType.TODAY, label: DATE_RANGE_LABEL_TODAY },
-            { type: DateRangeType.THIS_WEEK, label: DATE_RANGE_LABEL_THIS_WEEK },
-            { type: DateRangeType.LAST_WEEK, label: DATE_RANGE_LABEL_LAST_WEEK },
-            { type: DateRangeType.THIS_MONTH, label: DATE_RANGE_LABEL_THIS_MONTH },
-            { type: DateRangeType.LAST_MONTH, label: DATE_RANGE_LABEL_LAST_MONTH },
-            { type: DateRangeType.THIS_YEAR, label: DATE_RANGE_LABEL_THIS_YEAR },
-            { type: DateRangeType.LAST_YEAR, label: DATE_RANGE_LABEL_LAST_YEAR },
-            { type: DateRangeType.ALL_TIME, label: DATE_RANGE_LABEL_ALL_TIME },
-            { type: DateRangeType.CUSTOM, label: DATE_RANGE_LABEL_CUSTOM_RANGE }
+            { type: DateRangeType.TODAY, label: this.getDateRangeTypeLabel(DateRangeType.TODAY) },
+            { type: DateRangeType.THIS_WEEK, label: this.getDateRangeTypeLabel(DateRangeType.THIS_WEEK) },
+            { type: DateRangeType.LAST_WEEK, label: this.getDateRangeTypeLabel(DateRangeType.LAST_WEEK) },
+            { type: DateRangeType.THIS_MONTH, label: this.getDateRangeTypeLabel(DateRangeType.THIS_MONTH) },
+            { type: DateRangeType.LAST_MONTH, label: this.getDateRangeTypeLabel(DateRangeType.LAST_MONTH) },
+            { type: DateRangeType.THIS_YEAR, label: this.getDateRangeTypeLabel(DateRangeType.THIS_YEAR) },
+            { type: DateRangeType.LAST_YEAR, label: this.getDateRangeTypeLabel(DateRangeType.LAST_YEAR) },
+            { type: DateRangeType.ALL_TIME, label: this.getDateRangeTypeLabel(DateRangeType.ALL_TIME) },
+            { type: DateRangeType.CUSTOM, label: this.getDateRangeTypeLabel(DateRangeType.CUSTOM) }
         ];
     }
 
@@ -4013,9 +4040,9 @@ export class ExpensicaDashboardView extends ItemView {
                 return String(start.getFullYear());
             case DateRangeType.ALL_TIME:
             case DateRangeType.CUSTOM:
-                return fallbackLabel ?? dateRange.label;
+                return fallbackLabel ?? this.getDateRangeDisplayLabel(dateRange);
             default:
-                return fallbackLabel ?? dateRange.label;
+                return fallbackLabel ?? this.getDateRangeDisplayLabel(dateRange);
         }
     }
 
@@ -5186,7 +5213,7 @@ export class ExpensicaDashboardView extends ItemView {
             const emptyState = transactionsContainer.createDiv('expensica-empty-state');
             emptyState.createEl('div', { text: '📝', cls: 'expensica-empty-state-icon' });
             emptyState.createEl('p', {
-                text: t('dashboard.noTransactionsHint', { range: this.dateRange.label.toLowerCase() }),
+                text: t('dashboard.noTransactionsHint', { range: this.getDateRangeDisplayLabel(this.dateRange).toLowerCase() }),
                 cls: 'expensica-empty-state-message'
             });
         } else {

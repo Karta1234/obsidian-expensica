@@ -383,6 +383,16 @@ export const en = {
     customRange: 'Custom Range',
   },
   dashboard: {
+    // Date-range picker button captions (terse abbreviations)
+    rangeToday: 'TD',
+    rangeThisWeek: '1W',
+    rangeLastWeek: 'LW',
+    rangeThisMonth: '1M',
+    rangeLastMonth: 'LM',
+    rangeThisYear: '1Y',
+    rangeLastYear: 'LY',
+    rangeAll: 'All',
+    rangeCustom: 'Range',
     heatmapTitle: 'Spending Heatmap Calendar',
     today: 'Today',
     // Tabs

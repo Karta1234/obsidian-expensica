@@ -375,6 +375,16 @@ export const ru: Messages = {
     customRange: 'Произвольный период',
   },
   dashboard: {
+    // Подписи кнопок выбора периода (короткие сокращения)
+    rangeToday: 'Сег',
+    rangeThisWeek: '1Н',
+    rangeLastWeek: 'ПрН',
+    rangeThisMonth: '1М',
+    rangeLastMonth: 'ПрМ',
+    rangeThisYear: '1Г',
+    rangeLastYear: 'ПрГ',
+    rangeAll: 'Все',
+    rangeCustom: 'Период',
     heatmapTitle: 'Календарь тепловой карты расходов',
     today: 'Сегодня',
     tabOverview: 'Обзор',
