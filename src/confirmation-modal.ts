@@ -1,4 +1,5 @@
 import { App, Modal } from 'obsidian';
+import { t } from './i18n';
 
 export class ConfirmationModal extends Modal {
     private title: string;
@@ -28,12 +29,12 @@ export class ConfirmationModal extends Modal {
         const buttonContainer = contentEl.createDiv('expensica-modal-buttons');
         
         const cancelBtn = buttonContainer.createEl('button', {
-            text: 'Cancel',
+            text: t('common.cancel'),
             cls: 'expensica-standard-button expensica-btn expensica-btn-secondary'
         });
-        
+
         const confirmBtn = buttonContainer.createEl('button', {
-            text: 'Delete',
+            text: t('common.delete'),
             cls: 'expensica-standard-button expensica-btn expensica-btn-danger-solid'
         });
 

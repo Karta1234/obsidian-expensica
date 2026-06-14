@@ -3,6 +3,7 @@ import { Category, CategoryType, ColorPalette, getCommonCategoryEmojis, INTERNAL
 import type ExpensicaPlugin from '../main';
 import { EmojiPickerModal } from './emoji-picker-modal';
 import { showExpensicaNotice } from './notice';
+import { t } from './i18n';
 
 let activeQuickMenu: CategoryQuickMenu | null = null;
 
@@ -82,8 +83,8 @@ class CategoryQuickMenu {
             cls: 'expensica-form-input expensica-category-quick-menu-search-input',
             attr: {
                 type: 'search',
-                placeholder: 'Search categories',
-                'aria-label': 'Search categories',
+                placeholder: t('category.searchPlaceholder'),
+                'aria-label': t('category.searchPlaceholder'),
                 autocomplete: 'off'
             }
         });
@@ -98,7 +99,7 @@ class CategoryQuickMenu {
                 type: 'button'
             }
         });
-        newCategoryButton.innerHTML = '<span class="expensica-category-quick-menu-new-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg></span><span class="expensica-category-quick-menu-new-label">New Category</span>';
+        newCategoryButton.innerHTML = `<span class="expensica-category-quick-menu-new-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg></span><span class="expensica-category-quick-menu-new-label">${t('category.newCategory')}</span>`;
         newCategoryButton.addEventListener('click', () => {
             this.close();
             new NewCategoryModal(this.plugin.app, this.plugin, this.categoryType, async (categoryId) => {
@@ -287,7 +288,7 @@ class CategoryQuickMenu {
 
         if (this.filteredCategories.length === 0) {
             this.listEl.createDiv({
-                text: 'No categories found',
+                text: t('category.noneFound'),
                 cls: 'expensica-category-quick-menu-empty'
             });
             return;
@@ -393,12 +394,12 @@ class NewCategoryModal extends Modal {
         contentEl.addClass('expensica-modal');
 
         const title = contentEl.createEl('h2', { cls: 'expensica-modal-title' });
-        title.innerHTML = `<span class="expensica-modal-title-icon">\u{1F3F7}\u{FE0F}</span> ${this.categoryType === CategoryType.INCOME ? 'New Income Category' : 'New Expense Category'}`;
+        title.innerHTML = `<span class="expensica-modal-title-icon">\u{1F3F7}\u{FE0F}</span> ${this.categoryType === CategoryType.INCOME ? t('category.newIncomeTitle') : t('category.newExpenseTitle')}`;
 
         const form = contentEl.createEl('form', { cls: 'expensica-form' });
         const nameGroup = form.createDiv('expensica-form-group');
         nameGroup.createEl('label', {
-            text: 'Name',
+            text: t('category.nameLabel'),
             cls: 'expensica-form-label',
             attr: { for: 'new-category-name' }
         });
@@ -417,7 +418,7 @@ class NewCategoryModal extends Modal {
             attr: {
                 type: 'button',
                 id: 'new-category-color',
-                'aria-label': 'Choose color'
+                'aria-label': t('category.chooseColor')
             }
         });
         colorButton.style.setProperty('--expensica-category-button-color', selectedColor);
@@ -434,7 +435,7 @@ class NewCategoryModal extends Modal {
             attr: {
                 type: 'button',
                 id: 'new-category-emoji',
-                'aria-label': 'Choose emoji'
+                'aria-label': t('category.chooseEmoji')
             }
         });
         emojiButton.addEventListener('click', () => {
@@ -450,19 +451,19 @@ class NewCategoryModal extends Modal {
                 type: 'text',
                 id: 'new-category-name',
                 name: 'new-category-name',
-                placeholder: 'Enter category name',
+                placeholder: t('category.namePlaceholder'),
                 required: 'required'
             }
         });
 
         const footer = form.createDiv('expensica-form-footer');
         const cancelButton = footer.createEl('button', {
-            text: 'Cancel',
+            text: t('common.cancel'),
             cls: 'expensica-standard-button expensica-btn expensica-btn-secondary',
             attr: { type: 'button' }
         });
         footer.createEl('button', {
-            text: 'Save',
+            text: t('common.save'),
             cls: 'expensica-standard-button expensica-btn expensica-btn-primary',
             attr: { type: 'submit' }
         });
@@ -476,7 +477,7 @@ class NewCategoryModal extends Modal {
 
             const normalizedName = this.plugin.normalizeCategoryName(nameInput.value.trim()).name.trim();
             if (!normalizedName) {
-                showExpensicaNotice('Category name is required.');
+                showExpensicaNotice(t('category.nameRequired'));
                 return;
             }
 
@@ -484,7 +485,7 @@ class NewCategoryModal extends Modal {
                 this.plugin.normalizeCategoryName(category.name).name.toLowerCase() === normalizedName.toLowerCase()
             );
             if (duplicate) {
-                showExpensicaNotice(`Category "${normalizedName}" already exists.`);
+                showExpensicaNotice(t('category.alreadyExists', { name: normalizedName }));
                 return;
             }
 
@@ -538,7 +539,7 @@ class CategoryColorPaletteModal extends Modal {
                 cls: 'expensica-category-color-swatch',
                 attr: {
                     type: 'button',
-                    'aria-label': `Select color ${normalizedColor}`
+                    'aria-label': t('category.selectColor', { color: normalizedColor })
                 }
             });
             swatch.style.backgroundColor = normalizedColor;

@@ -108,6 +108,32 @@ export const en = {
   },
   account: {
     runningBalance: 'Running Balance',
+    createTitle: 'Create New Account',
+    createDesc: 'Add chequing, saving, credit, or other',
+  },
+  category: {
+    searchPlaceholder: 'Search categories',
+    newCategory: 'New Category',
+    noneFound: 'No categories found',
+    newIncomeTitle: 'New Income Category',
+    newExpenseTitle: 'New Expense Category',
+    nameLabel: 'Name',
+    namePlaceholder: 'Enter category name',
+    chooseColor: 'Choose color',
+    chooseEmoji: 'Choose emoji',
+    selectColor: 'Select color {color}',
+    nameRequired: 'Category name is required.',
+    alreadyExists: 'Category "{name}" already exists.',
+    emojiPlaceholder: 'Enter an emoji',
+    commonEmojis: 'Common emojis:',
+    showTransactions: 'Show transactions for {name}',
+    deletedHint: 'This category was deleted. Edit the transaction to select a new category.',
+    cannotChange: 'You cannot change this category',
+    otherExpenses: 'Other Expenses',
+  },
+  budget: {
+    spent: 'Spent {amount}',
+    remaining: 'Remaining {amount}',
   },
   errors: {
     accountExists: 'Account already exists',
@@ -206,6 +232,12 @@ export const en = {
       few: '{count} transactions',
       many: '{count} transactions',
     } as PluralForms,
+    select: 'Select transaction {description}',
+    unselect: 'Unselect transaction {description}',
+  },
+  dashboard: {
+    heatmapTitle: 'Spending Heatmap Calendar',
+    today: 'Today',
   },
 };
 

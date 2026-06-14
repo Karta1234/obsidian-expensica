@@ -1,5 +1,6 @@
 import { App, Modal } from 'obsidian';
 import { Category, getCommonCategoryEmojis } from './models';
+import { t } from './i18n';
 
 export class EmojiPickerModal extends Modal {
     category: Category;
@@ -25,13 +26,13 @@ export class EmojiPickerModal extends Modal {
             attr: {
                 type: 'text',
                 value: this.currentEmoji,
-                placeholder: 'Enter an emoji'
+                placeholder: t('category.emojiPlaceholder')
             },
             cls: 'emoji-input'
         });
 
         const commonEmojis = form.createDiv('common-emojis');
-        commonEmojis.createEl('p', { text: 'Common emojis:' });
+        commonEmojis.createEl('p', { text: t('category.commonEmojis') });
 
         const emojis = getCommonCategoryEmojis(this.category.type);
 
@@ -51,12 +52,12 @@ export class EmojiPickerModal extends Modal {
         const buttonContainer = form.createDiv('button-container');
 
         const cancelButton = buttonContainer.createEl('button', {
-            text: 'Cancel',
+            text: t('common.cancel'),
             cls: 'expensica-btn expensica-btn-secondary'
         });
 
         const saveButton = buttonContainer.createEl('button', {
-            text: 'Save',
+            text: t('common.save'),
             cls: 'expensica-btn expensica-btn-primary'
         });
 

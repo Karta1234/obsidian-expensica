@@ -1,4 +1,5 @@
 import { type Budget, formatCurrency } from './models';
+import { t } from './i18n';
 
 interface BudgetCardOptions {
     budget: Budget;
@@ -87,11 +88,11 @@ export function renderBudgetCard(container: HTMLElement, options: BudgetCardOpti
 
     const balanceEl = amountEl.createDiv('expensica-transaction-balance expensica-budget-card-balance');
     balanceEl.createEl('span', {
-        text: `Spent ${formatCompactCurrency(spent, currencyCode)}`,
+        text: t('budget.spent', { amount: formatCompactCurrency(spent, currencyCode) }),
         cls: 'expensica-transaction-balance-label'
     });
     balanceEl.createEl('span', {
-        text: `Remaining ${formatCompactCurrency(remaining, currencyCode)}`,
+        text: t('budget.remaining', { amount: formatCompactCurrency(remaining, currencyCode) }),
         cls: 'expensica-transaction-balance-label'
     });
 

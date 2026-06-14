@@ -1,6 +1,7 @@
 import { CalendarHeatmap } from './visualizations/calendar-view';
 import ExpensicaPlugin from '../main';
 import { Transaction } from './models';
+import { t } from './i18n';
 
 export class PremiumVisualizations {
     private container: HTMLElement;
@@ -42,7 +43,7 @@ export class PremiumVisualizations {
         const headerContent = header.createDiv('expensica-calendar-header-content');
 
         headerContent.createEl('h2', {
-            text: 'Spending Heatmap Calendar',
+            text: t('dashboard.heatmapTitle'),
             cls: 'expensica-calendar-title'
         });
         
@@ -63,7 +64,7 @@ export class PremiumVisualizations {
         // Today button
         const todayButton = navContainer.createEl('button', {
             cls: 'expensica-standard-button expensica-calendar-nav-button',
-            text: 'Today'
+            text: t('dashboard.today')
         });
         todayButton.onclick = () => {
             if (this.onTodayClick) {

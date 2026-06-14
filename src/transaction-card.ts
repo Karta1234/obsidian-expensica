@@ -13,6 +13,7 @@ import type ExpensicaPlugin from '../main';
 import { renderCategoryChip } from './category-chip';
 import { showCategoryQuickMenu } from './category-quick-menu';
 import { showExpensicaNotice } from './notice';
+import { t } from './i18n';
 
 interface TransactionCardOptions {
     plugin: ExpensicaPlugin;
@@ -53,7 +54,7 @@ export function renderTransactionCard(container: HTMLElement, options: Transacti
         { id: category.id, name: category.name, emoji: plugin.getCategoryEmoji(category.id), type: category.type } :
         {
             id: 'other_expense',
-            name: 'Other Expenses',
+            name: t('category.otherExpenses'),
             emoji: plugin.getCategoryEmoji('other_expense'),
             type: CategoryType.EXPENSE
         };
@@ -61,7 +62,9 @@ export function renderTransactionCard(container: HTMLElement, options: Transacti
         cls: 'expensica-transaction-selector',
         attr: {
             type: 'button',
-            'aria-label': `${selected ? 'Unselect' : 'Select'} transaction ${transaction.description}`,
+            'aria-label': selected
+                ? t('tx.unselect', { description: transaction.description })
+                : t('tx.select', { description: transaction.description }),
             'aria-pressed': String(!!selected)
         }
     });
@@ -118,7 +121,7 @@ export function renderTransactionCard(container: HTMLElement, options: Transacti
             text: categoryDisplay.name,
             color: category ? plugin.getCategoryColor(category.id, category.name) : undefined,
             colorName: categoryDisplay.name,
-            title: !category ? 'This category was deleted. Edit the transaction to select a new category.' : undefined
+            title: !category ? t('category.deletedHint') : undefined
         });
         categorySpan.addClass('expensica-transaction-category');
 
@@ -129,7 +132,7 @@ export function renderTransactionCard(container: HTMLElement, options: Transacti
                 event.preventDefault();
                 event.stopPropagation();
                 if (transaction.category === INTERNAL_CATEGORY_ID || transaction.type === TransactionType.INTERNAL) {
-                    showExpensicaNotice('You cannot change this category');
+                    showExpensicaNotice(t('category.cannotChange'));
                     return;
                 }
                 showTransactionCategoryMenu(event, plugin, transaction, categoryDisplay.type, onCategoryChange);
@@ -142,7 +145,7 @@ export function renderTransactionCard(container: HTMLElement, options: Transacti
                 event.preventDefault();
                 event.stopPropagation();
                 if (transaction.category === INTERNAL_CATEGORY_ID || transaction.type === TransactionType.INTERNAL) {
-                    showExpensicaNotice('You cannot change this category');
+                    showExpensicaNotice(t('category.cannotChange'));
                     return;
                 }
                 showTransactionCategoryMenu(event, plugin, transaction, categoryDisplay.type, onCategoryChange);
