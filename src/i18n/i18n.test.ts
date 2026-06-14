@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { t, setActiveLocale } from './index';
+import { t, setActiveLocale, resolveLocale } from './index';
 
 describe('t() lookup, fallback, interpolation', () => {
   beforeEach(() => setActiveLocale('ru'));
@@ -52,5 +52,21 @@ describe('плюрализация (русский)', () => {
     setActiveLocale('en');
     expect(t('tx.count', { count: 1 })).toBe('1 transaction');
     expect(t('tx.count', { count: 3 })).toBe('3 transactions');
+  });
+});
+
+describe('resolveLocale', () => {
+  it('явный ru/en возвращается как есть', () => {
+    expect(resolveLocale('ru', 'en')).toBe('ru');
+    expect(resolveLocale('en', 'ru')).toBe('en');
+  });
+
+  it('auto + obsidian ru -> ru', () => {
+    expect(resolveLocale('auto', 'ru')).toBe('ru');
+  });
+
+  it('auto + неподдерживаемый язык obsidian -> en', () => {
+    expect(resolveLocale('auto', 'fr')).toBe('en');
+    expect(resolveLocale('auto', 'zh')).toBe('en');
   });
 });

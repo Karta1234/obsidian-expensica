@@ -64,3 +64,16 @@ function interpolatePlural(forms: PluralForms, params?: Params): string {
     category === 'one' ? forms.one : category === 'few' ? forms.few : forms.many;
   return interpolate(form, params);
 }
+
+export type LanguageSetting = 'auto' | LocaleCode;
+
+const SUPPORTED: LocaleCode[] = ['en', 'ru'];
+
+// setting — значение из настроек плагина; obsidianLang — результат getLanguage().
+export function resolveLocale(setting: LanguageSetting, obsidianLang: string): LocaleCode {
+  if (setting !== 'auto') return setting;
+  const normalized = (obsidianLang || '').toLowerCase().split('-')[0];
+  return (SUPPORTED as string[]).includes(normalized)
+    ? (normalized as LocaleCode)
+    : DEFAULT_LOCALE;
+}
