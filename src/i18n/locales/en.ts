@@ -121,7 +121,7 @@ export const en = {
     creditLimit: 'Credit Limit',
     openingBalance: 'Opening balance',
     typeChequing: 'Chequing',
-    typeSaving: 'Saving',
+    typeSaving: 'Savings',
     typeCredit: 'Credit',
     typeOther: 'Other',
     nameRequired: 'Account name is required',

@@ -1,5 +1,7 @@
 // Define the data model for transactions
 
+import { t } from './i18n';
+
 export enum TransactionType {
     EXPENSE = 'expense',
     INCOME = 'income',
@@ -240,7 +242,18 @@ export function parseAccountReference(account?: string | null): { type: AccountT
 }
 
 export function getAccountTypeLabel(type: AccountType): string {
-  return ACCOUNT_TYPE_LABELS[type];
+  // Resolve via t() at call time so labels re-localize when the active language changes.
+  switch (type) {
+    case AccountType.CHEQUING:
+      return t('account.typeChequing');
+    case AccountType.SAVING:
+      return t('account.typeSaving');
+    case AccountType.CREDIT:
+      return t('account.typeCredit');
+    case AccountType.OTHER:
+    default:
+      return t('account.typeOther');
+  }
 }
 
 export function getAccountEmoji(type: AccountType): string {
