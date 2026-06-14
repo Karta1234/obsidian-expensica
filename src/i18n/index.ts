@@ -67,13 +67,13 @@ function interpolatePlural(forms: PluralForms, params?: Params): string {
 
 export type LanguageSetting = 'auto' | LocaleCode;
 
-const SUPPORTED: LocaleCode[] = ['en', 'ru'];
+const SUPPORTED = Object.keys(dictionaries) as LocaleCode[];
 
 // setting — значение из настроек плагина; obsidianLang — результат getLanguage().
 export function resolveLocale(setting: LanguageSetting, obsidianLang: string): LocaleCode {
   if (setting !== 'auto') return setting;
   const normalized = (obsidianLang || '').toLowerCase().split('-')[0];
-  return (SUPPORTED as string[]).includes(normalized)
+  return SUPPORTED.includes(normalized as LocaleCode)
     ? (normalized as LocaleCode)
     : DEFAULT_LOCALE;
 }

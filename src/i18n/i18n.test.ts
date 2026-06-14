@@ -69,4 +69,10 @@ describe('resolveLocale', () => {
     expect(resolveLocale('auto', 'fr')).toBe('en');
     expect(resolveLocale('auto', 'zh')).toBe('en');
   });
+
+  it('auto: нормализует регион и регистр (ru-RU, RU)', () => {
+    expect(resolveLocale('auto', 'ru-RU')).toBe('ru');
+    expect(resolveLocale('auto', 'RU')).toBe('ru');
+    expect(resolveLocale('auto', 'en-GB')).toBe('en');
+  });
 });
