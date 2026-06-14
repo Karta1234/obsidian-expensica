@@ -1,4 +1,5 @@
 import { Transaction, TransactionType, Category, parseLocalDate } from './models';
+import { t, localizedDate, localizedNumber, localizedMonthYear } from './i18n';
 
 // Import jsPDF dynamically for Obsidian compatibility
 let jsPDF: any;
@@ -135,15 +136,12 @@ export class ExportService {
       
       doc.setFontSize(12);
       doc.setTextColor(100, 100, 100);
-      doc.text(new Date().toLocaleDateString(), 170, 20);
-      
+      doc.text(localizedDate(new Date()), 170, 20);
+
       doc.setFontSize(16);
       doc.setTextColor(27, 94, 32); // #1B5E20
-      doc.text('Your Personal Finance Dashboard', 20, 35);
-      
-      // Get locale based on currency
-      const locale = currency === 'INR' ? 'en-IN' : 'en-US';
-      
+      doc.text(t('export.pdfSubtitle'), 20, 35);
+
       // Group transactions by month
       const groupedTransactions = transactions.reduce((groups, transaction) => {
         const date = parseLocalDate(transaction.date);
@@ -167,7 +165,7 @@ export class ExportService {
         
         // Add month header
         const monthDate = new Date(parseInt(year), parseInt(month) - 1);
-        const monthName = monthDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+        const monthName = localizedMonthYear(monthDate);
         
         doc.setFontSize(14);
         doc.setTextColor(27, 94, 32);
@@ -178,14 +176,14 @@ export class ExportService {
         const tableData = monthTransactions.map(transaction => {
           const category = categories.find(c => c.id === transaction.category);
           return [
-            parseLocalDate(transaction.date).toLocaleDateString('en-US', {
+            localizedDate(parseLocalDate(transaction.date), {
               month: 'short',
               day: 'numeric'
             }),
             transaction.description,
-            category ? category.name : 'Other Expenses',
-            transaction.type === TransactionType.EXPENSE ? 'Expense' : 'Income',
-            Math.abs(transaction.amount).toLocaleString(locale, {
+            category ? category.name : t('export.otherExpenses'),
+            transaction.type === TransactionType.EXPENSE ? t('export.typeExpense') : t('export.typeIncome'),
+            localizedNumber(Math.abs(transaction.amount), {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2
             })
@@ -202,7 +200,7 @@ export class ExportService {
         // Add transactions table for this month
         doc.autoTable({
           startY: yOffset,
-          head: [['Date', 'Description', 'Category', 'Type', 'Amount']],
+          head: [[t('export.colDate'), t('export.colDescription'), t('export.colCategory'), t('export.colType'), t('export.colAmount')]],
           body: tableData,
           theme: 'grid',
           headStyles: {
