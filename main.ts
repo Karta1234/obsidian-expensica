@@ -44,6 +44,7 @@ import { ExportModal } from './src/export-modal';
 import { ConfirmationModal as ExpensicaConfirmationModal } from './src/confirmation-modal';
 import { showExpensicaNotice } from './src/notice';
 import { t, resolveLocale, setActiveLocale } from './src/i18n';
+import type { LanguageSetting } from './src/i18n';
 
 // Import visualizations for bundling
 import './src/dashboard-integration';
@@ -86,7 +87,7 @@ interface ExpensicaSettings {
     enableDailyFinanceReviewForAnyDate: boolean;
     dailyReviewFolder: string;
     sharedDateRangeState: SharedDateRangeState | null;
-    language: 'auto' | 'en' | 'ru';
+    language: LanguageSetting;
 }
 
 type LegacyCategory = Category & { emoji?: string };
@@ -1692,7 +1693,7 @@ class ExpensicaSettingTab extends PluginSettingTab {
                 .addOption('en', 'English')
                 .setValue(this.plugin.settings.language)
                 .onChange(async (value) => {
-                    this.plugin.settings.language = value as 'auto' | 'en' | 'ru';
+                    this.plugin.settings.language = value as LanguageSetting;
                     await this.plugin.saveSettings();
                     this.display();
                 }));
