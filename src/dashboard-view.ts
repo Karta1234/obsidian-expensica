@@ -25,6 +25,7 @@ import { EmojiPickerModal } from './emoji-picker-modal';
 import { showCategoryQuickMenu } from './category-quick-menu';
 import { getLastAccountTransaction, renderAccountCard, renderCreateAccountCard } from './account-card';
 import { accountBalanceFromAmounts } from './balance';
+import { localizedDate, localizedNumber } from './i18n';
 
 // Extend the plugin interface to include the new method
 declare module '../main' {
@@ -219,10 +220,10 @@ function formatRunningBalanceLabel(plugin: ExpensicaPlugin, balance: number, acc
 
     const normalizedSymbol = symbol.replace(/[A-Za-z]+/g, '').trim() || '$';
     const absoluteAmount = Math.abs(balance);
-    const fractionDigits = new Intl.NumberFormat('en-US', {
+    const fractionDigits = localizedNumber(absoluteAmount, {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
-    }).format(absoluteAmount);
+    });
     const sign = balance < 0 ? '-' : '';
     const amount = `${sign}${normalizedSymbol}${fractionDigits}`;
     if (!accountReference) {
@@ -249,10 +250,10 @@ function formatOverviewValueNumber(currencyCode: string, amount: number): string
         fractionDigits = 2;
     }
 
-    const formattedNumber = new Intl.NumberFormat('en-US', {
+    const formattedNumber = localizedNumber(absoluteAmount, {
         minimumFractionDigits: fractionDigits,
         maximumFractionDigits: fractionDigits
-    }).format(absoluteAmount);
+    });
 
     return `${sign}${formattedNumber}`;
 }
@@ -1242,13 +1243,13 @@ export class ExpensicaDashboardView extends ItemView {
         if (absoluteAmount >= 1000) {
             const thousands = absoluteAmount / 1000;
             const formattedThousands = Number.isInteger(thousands)
-                ? thousands.toLocaleString('en-US', { maximumFractionDigits: 0 })
-                : thousands.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+                ? localizedNumber(thousands, { maximumFractionDigits: 0 })
+                : localizedNumber(thousands, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
             return `${sign}${symbol}${formattedThousands}K`;
         }
 
-        return `${sign}${symbol}${absoluteAmount.toLocaleString('en-US')}`;
+        return `${sign}${symbol}${localizedNumber(absoluteAmount)}`;
     }
 
     private bindChartAreaTooltipClear(canvas: HTMLCanvasElement, chart: Chart) {
@@ -1609,8 +1610,8 @@ export class ExpensicaDashboardView extends ItemView {
                         month: 'short', 
                         day: 'numeric' 
                     };
-                    const startStr = start.toLocaleDateString(undefined, formatOptions);
-                    const endStr = end.toLocaleDateString(undefined, formatOptions);
+                    const startStr = localizedDate(start, formatOptions);
+                    const endStr = localizedDate(end, formatOptions);
                     label = `${startStr} - ${endStr}`;
                 } else {
                     // Fallback to this month if custom dates are not provided
@@ -2404,7 +2405,7 @@ export class ExpensicaDashboardView extends ItemView {
                     )}`
                     : undefined,
                 lastTransactionDateLabel: lastTransaction
-                    ? parseLocalDate(lastTransaction.date).toLocaleDateString('en-GB', {
+                    ? localizedDate(parseLocalDate(lastTransaction.date), {
                         day: '2-digit',
                         month: 'long',
                         year: 'numeric'
@@ -3324,7 +3325,7 @@ export class ExpensicaDashboardView extends ItemView {
     }
 
     formatChartShortDateLabel(date: Date, includeYear = false): string {
-        return date.toLocaleDateString(undefined, {
+        return localizedDate(date, {
             month: 'short',
             day: 'numeric',
             ...(includeYear ? { year: 'numeric' } : {})
@@ -3336,14 +3337,14 @@ export class ExpensicaDashboardView extends ItemView {
     }
 
     formatChartMonthLabel(date: Date, includeYear = false): string {
-        return date.toLocaleDateString(undefined, {
+        return localizedDate(date, {
             month: 'short',
             ...(includeYear ? { year: 'numeric' } : {})
         });
     }
 
     formatChartTooltipDayTitle(date: Date): string {
-        return date.toLocaleDateString(undefined, {
+        return localizedDate(date, {
             month: 'long',
             day: 'numeric',
             year: 'numeric'
@@ -3351,7 +3352,7 @@ export class ExpensicaDashboardView extends ItemView {
     }
 
     formatChartTooltipMonthTitle(date: Date): string {
-        return `${date.toLocaleDateString(undefined, { month: 'long' })}, ${date.getFullYear()}`;
+        return `${localizedDate(date, { month: 'long' })}, ${date.getFullYear()}`;
     }
 
     formatChartTooltipRangeTitle(start: Date, end: Date): string {
@@ -3973,7 +3974,7 @@ export class ExpensicaDashboardView extends ItemView {
             && end.getTime() - start.getTime() < 7 * 86400000;
 
         if (isSingleDay) {
-            return start.toLocaleDateString(undefined, {
+            return localizedDate(start, {
                 weekday: 'long',
                 month: 'long',
                 day: 'numeric',
@@ -3986,7 +3987,7 @@ export class ExpensicaDashboardView extends ItemView {
         }
 
         if (isFullMonth) {
-            return `${start.toLocaleDateString(undefined, { month: 'long' })}, ${start.getFullYear()}`;
+            return `${localizedDate(start, { month: 'long' })}, ${start.getFullYear()}`;
         }
 
         if (isFullYear) {
@@ -4001,7 +4002,7 @@ export class ExpensicaDashboardView extends ItemView {
             }
             case DateRangeType.THIS_MONTH:
             case DateRangeType.LAST_MONTH:
-                return `${start.toLocaleDateString(undefined, { month: 'long' })}, ${start.getFullYear()}`;
+                return `${localizedDate(start, { month: 'long' })}, ${start.getFullYear()}`;
             case DateRangeType.THIS_YEAR:
             case DateRangeType.LAST_YEAR:
                 return String(start.getFullYear());
@@ -5474,14 +5475,14 @@ export class ExpensicaDashboardView extends ItemView {
     }
 
     getTransactionMonthLabel(transaction: Transaction): string {
-        return parseLocalDate(transaction.date).toLocaleDateString('en-US', {
+        return localizedDate(parseLocalDate(transaction.date), {
             month: 'long',
             year: 'numeric'
         });
     }
 
     getTransactionDayLabel(transaction: Transaction): string {
-        return parseLocalDate(transaction.date).toLocaleDateString('en-US', {
+        return localizedDate(parseLocalDate(transaction.date), {
             weekday: 'long',
             month: 'long',
             day: 'numeric'
