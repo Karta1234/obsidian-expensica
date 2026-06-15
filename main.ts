@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Modal, Plugin, PluginSettingTab, Setting, WorkspaceLeaf, TFile } from 'obsidian';
+import { App, Editor, MarkdownView, Modal, Plugin, PluginSettingTab, Setting, WorkspaceLeaf, TFile, getLanguage } from 'obsidian';
 
 import { ExpensicaDashboardView, EXPENSICA_VIEW_TYPE, TransactionModal, DateRangeType, DashboardTab } from './src/dashboard-view';
 import { ExpensicaTransactionsView } from './src/transactions-view';
@@ -43,6 +43,8 @@ import {
 import { ExportModal } from './src/export-modal';
 import { ConfirmationModal as ExpensicaConfirmationModal } from './src/confirmation-modal';
 import { showExpensicaNotice } from './src/notice';
+import { t, resolveLocale, setActiveLocale } from './src/i18n';
+import type { LanguageSetting } from './src/i18n';
 
 // Import visualizations for bundling
 import './src/dashboard-integration';
@@ -85,6 +87,7 @@ interface ExpensicaSettings {
     enableDailyFinanceReviewForAnyDate: boolean;
     dailyReviewFolder: string;
     sharedDateRangeState: SharedDateRangeState | null;
+    language: LanguageSetting;
 }
 
 type LegacyCategory = Category & { emoji?: string };
@@ -93,6 +96,10 @@ const LEADING_CATEGORY_EMOJI_PATTERN = /^([\p{Extended_Pictographic}\uFE0F\u200D
 const INTERNAL_CATEGORY_NAME = DEFAULT_CATEGORIES.find(category => category.id === INTERNAL_CATEGORY_ID)?.name || 'Internal';
 const DEFAULT_CATEGORY_IDS = new Set(DEFAULT_CATEGORIES.map(category => category.id));
 const LEGACY_UNKNOWN_CATEGORY_IDS = new Set(['unknown', 'unknown_category', 'unknown category']);
+// Stable, non-localized basename for Daily Finance Review note filenames. MUST NOT be localized:
+// the on-disk filename has to stay constant across language switches so existing notes are matched
+// and updated (not orphaned). Only the in-note heading and Notices are localized.
+const REVIEW_NOTE_BASENAME = 'Daily Finance Review';
 
 // Define a separate interface for our transactions data
 interface TransactionsData {
@@ -134,7 +141,8 @@ const DEFAULT_SETTINGS: ExpensicaSettings = {
     enableDailyFinanceReview: true,
     enableDailyFinanceReviewForAnyDate: true,
     dailyReviewFolder: '',
-    sharedDateRangeState: null
+    sharedDateRangeState: null,
+    language: 'auto',
 };
 
 // Default transactions data
@@ -192,7 +200,7 @@ export default class ExpensicaPlugin extends Plugin {
         // Add a command for quick expense entry
         this.addCommand({
             id: 'add-expense',
-            name: 'Add New Expense',
+            name: t('commands.addExpense'),
             callback: () => {
                 this.openExpenseModal();
             }
@@ -201,7 +209,7 @@ export default class ExpensicaPlugin extends Plugin {
         // Add a command for quick income entry
         this.addCommand({
             id: 'add-income',
-            name: 'Add New Income',
+            name: t('commands.addIncome'),
             callback: () => {
                 this.openIncomeModal();
             }
@@ -210,7 +218,7 @@ export default class ExpensicaPlugin extends Plugin {
         // Add a command to open the dashboard
         this.addCommand({
             id: 'open-dashboard',
-            name: 'Open Dashboard',
+            name: t('commands.openDashboard'),
             callback: () => {
                 this.openDashboard();
             }
@@ -219,7 +227,7 @@ export default class ExpensicaPlugin extends Plugin {
         // Add a command to open the transactions view
         this.addCommand({
             id: 'open-transactions',
-            name: 'View All Transactions',
+            name: t('commands.viewTransactions'),
             callback: () => {
                 this.openTransactionsView();
             }
@@ -228,7 +236,7 @@ export default class ExpensicaPlugin extends Plugin {
         // Add a command to open the budget view
         this.addCommand({
             id: 'open-budget',
-            name: 'Open Budget',
+            name: t('commands.openBudget'),
             callback: () => {
                 this.openBudgetView();
             }
@@ -237,7 +245,7 @@ export default class ExpensicaPlugin extends Plugin {
         // Add a command to export transactions
         this.addCommand({
             id: 'export-transactions',
-            name: 'Export Transactions',
+            name: t('commands.exportTransactions'),
             callback: () => {
                 this.openExportModal();
             }
@@ -246,10 +254,10 @@ export default class ExpensicaPlugin extends Plugin {
         // Add a command to create a note with today's transactions
         this.addCommand({
             id: 'create-todays-transactions-note',
-            name: 'Create Daily Finance Review (For Today)',
+            name: t('commands.createReviewToday'),
             callback: () => {
                 if (!this.settings.enableDailyFinanceReview) {
-                    showExpensicaNotice('Daily Finance Review feature is disabled. Please enable it in settings.');
+                    showExpensicaNotice(t('notice.reviewTodayDisabled'));
                     return;
                 }
                 this.createDailyFinanceReview();
@@ -259,10 +267,10 @@ export default class ExpensicaPlugin extends Plugin {
         // Add a command to create/update a daily review note for any date
         this.addCommand({
             id: 'create-daily-review-for-date',
-            name: 'Create/Update Daily Finance Review for Any Date',
+            name: t('commands.createReviewAnyDate'),
             callback: () => {
                 if (!this.settings.enableDailyFinanceReviewForAnyDate) {
-                    showExpensicaNotice('Daily Finance Review for Any Date feature is disabled. Please enable it in settings.');
+                    showExpensicaNotice(t('notice.reviewAnyDateDisabled'));
                     return;
                 }
                 this.createDailyFinanceReviewForDate();
@@ -322,7 +330,7 @@ export default class ExpensicaPlugin extends Plugin {
             console.log('Expensica: Transactions loaded successfully', this.transactionsData.transactions.length, 'transactions found');
         } catch (error) {
             console.error('Expensica: Error loading transactions data', error);
-            showExpensicaNotice('Error loading transactions data. Using default data.');
+            showExpensicaNotice(t('notice.loadTransactionsError'));
             this.transactionsData = DEFAULT_TRANSACTIONS_DATA;
             await this.saveTransactionsData();
         }
@@ -342,7 +350,7 @@ export default class ExpensicaPlugin extends Plugin {
             );
         } catch (error) {
             console.error('Failed to save transactions data:', error);
-            showExpensicaNotice('Failed to save transactions data');
+            showExpensicaNotice(t('notice.saveTransactionsError'));
         }
     }
 
@@ -367,7 +375,7 @@ export default class ExpensicaPlugin extends Plugin {
             console.log('Expensica: Accounts loaded successfully', this.transactionsData.accounts.length, 'accounts found');
         } catch (error) {
             console.error('Expensica: Error loading accounts data', error);
-            showExpensicaNotice('Error loading accounts data. Using default data.');
+            showExpensicaNotice(t('notice.loadAccountsError'));
             this.transactionsData.accounts = [...DEFAULT_ACCOUNTS_DATA.accounts];
             this.normalizeTransactionsData();
             await this.saveAccountsData();
@@ -387,7 +395,7 @@ export default class ExpensicaPlugin extends Plugin {
             );
         } catch (error) {
             console.error('Failed to save accounts data:', error);
-            showExpensicaNotice('Failed to save accounts data');
+            showExpensicaNotice(t('notice.saveAccountsError'));
         }
     }
 
@@ -421,7 +429,7 @@ export default class ExpensicaPlugin extends Plugin {
         } catch (error) {
             // If there's an error, initialize with default data
             console.error('Expensica: Error loading budget data', error);
-            showExpensicaNotice('Error loading budget data. Using default data.');
+            showExpensicaNotice(t('notice.loadBudgetError'));
             this.budgetData = DEFAULT_BUDGET_DATA;
             await this.saveBudgetData();
         }
@@ -441,7 +449,7 @@ export default class ExpensicaPlugin extends Plugin {
             console.log('Expensica: Budgets saved successfully');
         } catch (error) {
             console.error('Expensica: Error saving budget data', error);
-            showExpensicaNotice('Error saving budget data. See console for details.');
+            showExpensicaNotice(t('notice.saveBudgetError'));
         }
     }
 
@@ -557,10 +565,12 @@ export default class ExpensicaPlugin extends Plugin {
     async loadSettings() {
         const loadedData = await this.loadData();
         this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
+        setActiveLocale(resolveLocale(this.settings.language, getLanguage()));
         this.normalizeCategorySettings();
     }
 
     async saveSettings(refreshViews = true) {
+        setActiveLocale(resolveLocale(this.settings.language, getLanguage()));
         this.normalizeCategorySettings();
         await this.saveData({
             ...this.settings,
@@ -781,14 +791,14 @@ export default class ExpensicaPlugin extends Plugin {
     async addCategory(category: Category): Promise<void> {
         const normalizedName = this.normalizeCategoryName(category.name).name;
         if (this.isReservedCategoryName(category.id, normalizedName)) {
-            throw new Error(`Category name "${INTERNAL_CATEGORY_NAME}" is reserved`);
+            throw new Error(t('errors.categoryNameReserved', { name: INTERNAL_CATEGORY_NAME }));
         }
         const duplicate = this.settings.categories.find(existing =>
             existing.type === category.type
             && this.normalizeCategoryName(existing.name).name.toLowerCase() === normalizedName.toLowerCase()
         );
         if (duplicate) {
-            throw new Error('Category already exists');
+            throw new Error(t('errors.categoryExists'));
         }
 
         this.settings.categories.push({
@@ -819,7 +829,7 @@ export default class ExpensicaPlugin extends Plugin {
         if (index !== -1) {
             const normalizedName = this.normalizeCategoryName(updatedCategory.name).name;
             if (this.isReservedCategoryName(updatedCategory.id, normalizedName)) {
-                throw new Error(`Category name "${INTERNAL_CATEGORY_NAME}" is reserved`);
+                throw new Error(t('errors.categoryNameReserved', { name: INTERNAL_CATEGORY_NAME }));
             }
             const duplicate = this.settings.categories.find(existing =>
                 existing.id !== updatedCategory.id
@@ -827,7 +837,7 @@ export default class ExpensicaPlugin extends Plugin {
                 && this.normalizeCategoryName(existing.name).name.toLowerCase() === normalizedName.toLowerCase()
             );
             if (duplicate) {
-                throw new Error('Category already exists');
+                throw new Error(t('errors.categoryExists'));
             }
 
             this.settings.categories[index] = {
@@ -877,8 +887,8 @@ export default class ExpensicaPlugin extends Plugin {
         return await new Promise<boolean>((resolve) => {
             new ExpensicaConfirmationModal(
                 this.app,
-                'Delete Category?',
-                `Are you sure you want to delete the "${category.name}" category? This action cannot be undone.`,
+                t('modals.deleteCategoryTitle'),
+                t('modals.deleteCategoryMessage', { name: category.name }),
                 async (confirmed) => {
                     if (!confirmed) {
                         resolve(false);
@@ -973,7 +983,7 @@ export default class ExpensicaPlugin extends Plugin {
         if (!this.settings.enableAccounts) {
             return {
                 ...account,
-                name: 'Running Balance',
+                name: t('account.runningBalance'),
                 isDefault: true
             };
         }
@@ -1005,14 +1015,14 @@ export default class ExpensicaPlugin extends Plugin {
             && formatAccountReference(existing.type, existing.name) !== previousReference
         );
         if (duplicateAccount) {
-            throw new Error('Account already exists');
+            throw new Error(t('errors.accountExists'));
         }
 
         const index = this.transactionsData.accounts.findIndex(existing =>
             formatAccountReference(existing.type, existing.name) === previousReference
         );
         if (index === -1) {
-            throw new Error('Account not found');
+            throw new Error(t('errors.accountNotFound'));
         }
 
         const updatedAccount: Account = {
@@ -1022,7 +1032,7 @@ export default class ExpensicaPlugin extends Plugin {
             color: normalizePaletteColor(account.color ?? this.transactionsData.accounts[index].color) || undefined
         };
         if (updatedAccount.isDefault && updatedAccount.type === AccountType.CREDIT) {
-            throw new Error('Default account cannot be credit');
+            throw new Error(t('errors.defaultAccountCannotBeCredit'));
         }
 
         if (updatedAccount.type !== AccountType.CREDIT) {
@@ -1059,7 +1069,7 @@ export default class ExpensicaPlugin extends Plugin {
             formatAccountReference(account.type, account.name) === accountReference
         );
         if (index === -1) {
-            throw new Error('Account not found');
+            throw new Error(t('errors.accountNotFound'));
         }
 
         this.transactionsData.accounts.splice(index, 1);
@@ -1220,11 +1230,11 @@ export default class ExpensicaPlugin extends Plugin {
         try {
             const jsonData = JSON.stringify(this.transactionsData.transactions, null, 2);
             await this.app.vault.adapter.write(filePath, jsonData);
-            showExpensicaNotice('Transactions exported successfully');
+            showExpensicaNotice(t('notice.exportSuccess'));
             return true;
         } catch (error) {
             console.error('Error exporting transactions:', error);
-            showExpensicaNotice('Error exporting transactions');
+            showExpensicaNotice(t('notice.exportError'));
             return false;
         }
     }
@@ -1246,15 +1256,15 @@ export default class ExpensicaPlugin extends Plugin {
                     ...validTransactions
                 ];
                 await this.saveTransactionsData();
-                showExpensicaNotice(`Imported ${validTransactions.length} transactions successfully`);
+                showExpensicaNotice(t('notice.importSuccess', { count: validTransactions.length }));
                 return true;
             } else {
-                showExpensicaNotice('Invalid file format for import');
+                showExpensicaNotice(t('notice.importInvalidFormat'));
                 return false;
             }
         } catch (error) {
             console.error('Error importing transactions:', error);
-            showExpensicaNotice('Error importing transactions');
+            showExpensicaNotice(t('notice.importError'));
             return false;
         }
     }
@@ -1344,10 +1354,13 @@ export default class ExpensicaPlugin extends Plugin {
             
             // Format today's date for the note title
             const dateStr = formatDate(now);
-            const noteTitle = `Daily Finance Review - ${dateStr}`;
-            
+            // Stable, non-localized filename base (keeps notes matchable across language switches)
+            const noteFileBase = `${REVIEW_NOTE_BASENAME} - ${dateStr}`;
+            // Localized title for the in-note heading and Notices only
+            const noteTitle = `${t('review.titlePrefix')} - ${dateStr}`;
+
             // Generate note content
-            let noteContent = `> [!info] This note was automatically generated by Expensica on ${now.toLocaleString()}\n\n`;
+            let noteContent = `> [!info] ${t('review.generatedBy', { datetime: now.toLocaleString() })}\n\n`;
             
             // Calculate summary metrics
             const todayIncome = TransactionAggregator.getTotalIncome(todaysTransactions);
@@ -1358,39 +1371,39 @@ export default class ExpensicaPlugin extends Plugin {
             const yesterdayExpenses = TransactionAggregator.getTotalExpenses(yesterdayTransactions);
             
             // Daily insights section
-            noteContent += `## 📊 Daily Summary\n\n`;
-            
+            noteContent += `## ${t('review.dailySummary')}\n\n`;
+
             if (todaysTransactions.length === 0) {
-                noteContent += `> [!note] No transactions recorded today.\n\n`;
+                noteContent += `> [!note] ${t('review.noTransactionsToday')}\n\n`;
             } else {
-                noteContent += `**Today's Snapshot:**\n`;
-                noteContent += `- **Income**: ${formatCurrency(todayIncome, this.settings.defaultCurrency)}\n`;
-                noteContent += `- **Expenses**: ${formatCurrency(todayExpenses, this.settings.defaultCurrency)}\n`;
-                noteContent += `- **Net Balance**: ${formatCurrency(todayBalance, this.settings.defaultCurrency)}\n`;
-                noteContent += `- **Number of Transactions**: ${todaysTransactions.length}\n\n`;
-                
+                noteContent += `**${t('review.todaysSnapshot')}**\n`;
+                noteContent += `- **${t('review.income')}**: ${formatCurrency(todayIncome, this.settings.defaultCurrency)}\n`;
+                noteContent += `- **${t('review.expenses')}**: ${formatCurrency(todayExpenses, this.settings.defaultCurrency)}\n`;
+                noteContent += `- **${t('review.netBalance')}**: ${formatCurrency(todayBalance, this.settings.defaultCurrency)}\n`;
+                noteContent += `- **${t('review.numberOfTransactions')}**: ${todaysTransactions.length}\n\n`;
+
                 // Compare with yesterday
                 if (yesterdayTransactions.length > 0) {
                     const expenseDiff = todayExpenses - yesterdayExpenses;
-                    const expensePctChange = yesterdayExpenses !== 0 
-                        ? (expenseDiff / yesterdayExpenses) * 100 
+                    const expensePctChange = yesterdayExpenses !== 0
+                        ? (expenseDiff / yesterdayExpenses) * 100
                         : todayExpenses > 0 ? 100 : 0;
-                    
-                    const expenseChangeText = expenseDiff > 0 
-                        ? `${formatCurrency(expenseDiff, this.settings.defaultCurrency)} more than yesterday (${expensePctChange.toFixed(1)}% increase)` 
-                        : expenseDiff < 0 
-                            ? `${formatCurrency(Math.abs(expenseDiff), this.settings.defaultCurrency)} less than yesterday (${Math.abs(expensePctChange).toFixed(1)}% decrease)` 
-                            : `the same as yesterday`;
-                    
-                    noteContent += `**Compared to Yesterday:**\n`;
-                    noteContent += `- You spent ${expenseChangeText}\n`;
+
+                    const expenseChangeText = expenseDiff > 0
+                        ? t('review.spentMore', { amount: formatCurrency(expenseDiff, this.settings.defaultCurrency), percent: expensePctChange.toFixed(1) })
+                        : expenseDiff < 0
+                            ? t('review.spentLess', { amount: formatCurrency(Math.abs(expenseDiff), this.settings.defaultCurrency), percent: Math.abs(expensePctChange).toFixed(1) })
+                            : t('review.spentSame');
+
+                    noteContent += `**${t('review.comparedToYesterday')}**\n`;
+                    noteContent += `- ${t('review.youSpent', { change: expenseChangeText })}\n`;
                 }
             }
-            
+
             // Today's transactions section
             if (todaysTransactions.length > 0) {
-                noteContent += `## 📝 Today's Transactions\n\n`;
-                noteContent += `| Description | Category | Amount | Notes |\n`;
+                noteContent += `## ${t('review.todaysTransactions')}\n\n`;
+                noteContent += `| ${t('review.tableDescription')} | ${t('review.tableCategory')} | ${t('review.tableAmount')} | ${t('review.tableNotes')} |\n`;
                 noteContent += `| ----------- | -------- | ------ | ----- |\n`;
                 
                 // Sort transactions by date and creation time (newest first)
@@ -1399,25 +1412,25 @@ export default class ExpensicaPlugin extends Plugin {
                 // Add each transaction to the table
                 for (const transaction of sortedTransactions) {
                     const category = this.getCategoryById(transaction.category);
-                    const categoryName = category ? `${this.getCategoryEmoji(category.id)} ${category.name}` : `${this.getCategoryEmoji('other_expense')} Other Expenses`;
+                    const categoryName = category ? `${this.getCategoryEmoji(category.id)} ${category.name}` : `${this.getCategoryEmoji('other_expense')} ${t('review.otherExpenses')}`;
                     const notes = transaction.notes || '';
-                    
+
                     // Format amount with color indicator
-                    const amountStr = transaction.type === TransactionType.INCOME 
-                        ? `+${formatCurrency(transaction.amount, this.settings.defaultCurrency)}` 
+                    const amountStr = transaction.type === TransactionType.INCOME
+                        ? `+${formatCurrency(transaction.amount, this.settings.defaultCurrency)}`
                         : `-${formatCurrency(transaction.amount, this.settings.defaultCurrency)}`;
-                    
+
                     noteContent += `| ${transaction.description} | ${categoryName} | ${amountStr} | ${notes} |\n`;
                 }
-                
+
                 // Show expense breakdown by category
                 const expensesByCategory = TransactionAggregator.getExpensesByCategory(
                     todaysTransactions.filter(t => t.type === TransactionType.EXPENSE),
                     this.settings.categories
                 );
-                
+
                 if (Object.keys(expensesByCategory).length > 0) {
-                    noteContent += `## 📊 Today's Spending Breakdown\n\n`;
+                    noteContent += `## ${t('review.todaysBreakdown')}\n\n`;
                     
                     // Convert to array and sort by amount (highest first)
                     const categoryBreakdown = Object.entries(expensesByCategory)
@@ -1435,13 +1448,13 @@ export default class ExpensicaPlugin extends Plugin {
                     noteContent += `\n`;
                 }
             } else {
-                noteContent += `## 📝 Today's Transactions\n\n`;
-                noteContent += `No transactions recorded today.\n\n`;
+                noteContent += `## ${t('review.todaysTransactions')}\n\n`;
+                noteContent += `${t('review.noTransactionsToday')}\n\n`;
             }
-            
+
             // Create or update the note
             const files = this.app.vault.getMarkdownFiles();
-            
+
             // Check if folder exists
             if (this.settings.dailyReviewFolder) {
                 const folderExists = await this.app.vault.adapter.exists(this.settings.dailyReviewFolder);
@@ -1451,26 +1464,26 @@ export default class ExpensicaPlugin extends Plugin {
                 }
             }
             
-            // Determine note path
-            const notePath = this.settings.dailyReviewFolder 
-                ? `${this.settings.dailyReviewFolder}/${noteTitle}.md`
-                : `${noteTitle}.md`;
-            
+            // Determine note path (stable, non-localized basename)
+            const notePath = this.settings.dailyReviewFolder
+                ? `${this.settings.dailyReviewFolder}/${noteFileBase}.md`
+                : `${noteFileBase}.md`;
+
             // Look for existing note
             const existingNote = files.find(file => file.path === notePath);
             
             if (existingNote) {
                 await this.app.vault.modify(existingNote, noteContent);
-                showExpensicaNotice(`Updated note: ${noteTitle}`);
+                showExpensicaNotice(t('notice.noteUpdated', { title: noteTitle }));
                 this.app.workspace.getLeaf().openFile(existingNote);
             } else {
                 const newNote = await this.app.vault.create(notePath, noteContent);
-                showExpensicaNotice(`Created note: ${noteTitle}`);
+                showExpensicaNotice(t('notice.noteCreated', { title: noteTitle }));
                 this.app.workspace.getLeaf().openFile(newNote);
             }
         } catch (error) {
             console.error('Failed to create daily finance review:', error);
-            showExpensicaNotice('Failed to create daily finance review');
+            showExpensicaNotice(t('notice.reviewCreateFailed'));
         }
     }
 
@@ -1496,10 +1509,13 @@ export default class ExpensicaPlugin extends Plugin {
                 
                 // Format the date for the note title
                 const dateStr = formatDate(selectedDate);
-                const noteTitle = `Daily Finance Review - ${dateStr}`;
-                
+                // Stable, non-localized filename base (keeps notes matchable across language switches)
+                const noteFileBase = `${REVIEW_NOTE_BASENAME} - ${dateStr}`;
+                // Localized title for the in-note heading and Notices only
+                const noteTitle = `${t('review.titlePrefix')} - ${dateStr}`;
+
                 // Generate note content
-                let noteContent = `> [!info] This note was automatically generated by Expensica on ${new Date().toLocaleString()}\n\n`;
+                let noteContent = `> [!info] ${t('review.generatedBy', { datetime: new Date().toLocaleString() })}\n\n`;
                 
                 // Calculate summary metrics
                 const dateIncome = TransactionAggregator.getTotalIncome(dateTransactions);
@@ -1507,22 +1523,22 @@ export default class ExpensicaPlugin extends Plugin {
                 const dateBalance = TransactionAggregator.getBalance(dateTransactions);
                 
                 // Daily insights section
-                noteContent += `## 📊 Daily Summary\n\n`;
-                
+                noteContent += `## ${t('review.dailySummary')}\n\n`;
+
                 if (dateTransactions.length === 0) {
-                    noteContent += `> [!note] No transactions recorded for this date.\n\n`;
+                    noteContent += `> [!note] ${t('review.noTransactionsDate')}\n\n`;
                 } else {
-                    noteContent += `**Daily Snapshot:**\n`;
-                    noteContent += `- **Income**: ${formatCurrency(dateIncome, this.settings.defaultCurrency)}\n`;
-                    noteContent += `- **Expenses**: ${formatCurrency(dateExpenses, this.settings.defaultCurrency)}\n`;
-                    noteContent += `- **Net Balance**: ${formatCurrency(dateBalance, this.settings.defaultCurrency)}\n`;
-                    noteContent += `- **Number of Transactions**: ${dateTransactions.length}\n\n`;
+                    noteContent += `**${t('review.dailySnapshot')}**\n`;
+                    noteContent += `- **${t('review.income')}**: ${formatCurrency(dateIncome, this.settings.defaultCurrency)}\n`;
+                    noteContent += `- **${t('review.expenses')}**: ${formatCurrency(dateExpenses, this.settings.defaultCurrency)}\n`;
+                    noteContent += `- **${t('review.netBalance')}**: ${formatCurrency(dateBalance, this.settings.defaultCurrency)}\n`;
+                    noteContent += `- **${t('review.numberOfTransactions')}**: ${dateTransactions.length}\n\n`;
                 }
-                
+
                 // Transactions section
                 if (dateTransactions.length > 0) {
-                    noteContent += `## 📝 Transactions\n\n`;
-                    noteContent += `| Description | Category | Amount | Notes |\n`;
+                    noteContent += `## ${t('review.transactions')}\n\n`;
+                    noteContent += `| ${t('review.tableDescription')} | ${t('review.tableCategory')} | ${t('review.tableAmount')} | ${t('review.tableNotes')} |\n`;
                     noteContent += `| ----------- | -------- | ------ | ----- |\n`;
                     
                     // Sort transactions by date and creation time (newest first)
@@ -1531,26 +1547,26 @@ export default class ExpensicaPlugin extends Plugin {
                     // Add each transaction to the table
                     for (const transaction of sortedTransactions) {
                         const category = this.getCategoryById(transaction.category);
-                        const categoryName = category ? `${this.getCategoryEmoji(category.id)} ${category.name}` : `${this.getCategoryEmoji('other_expense')} Other Expenses`;
+                        const categoryName = category ? `${this.getCategoryEmoji(category.id)} ${category.name}` : `${this.getCategoryEmoji('other_expense')} ${t('review.otherExpenses')}`;
                         const notes = transaction.notes || '';
-                        
+
                         // Format amount with color indicator
-                        const amountStr = transaction.type === TransactionType.INCOME 
-                            ? `+${formatCurrency(transaction.amount, this.settings.defaultCurrency)}` 
+                        const amountStr = transaction.type === TransactionType.INCOME
+                            ? `+${formatCurrency(transaction.amount, this.settings.defaultCurrency)}`
                             : `-${formatCurrency(transaction.amount, this.settings.defaultCurrency)}`;
-                        
+
                         noteContent += `| ${transaction.description} | ${categoryName} | ${amountStr} | ${notes} |\n`;
                     }
                     noteContent += `\n`;
-                    
+
                     // Show expense breakdown by category
                     const expensesByCategory = TransactionAggregator.getExpensesByCategory(
                         dateTransactions.filter(t => t.type === TransactionType.EXPENSE),
                         this.settings.categories
                     );
-                    
+
                     if (Object.keys(expensesByCategory).length > 0) {
-                        noteContent += `## 📊 Spending Breakdown\n\n`;
+                        noteContent += `## ${t('review.breakdown')}\n\n`;
                         
                         // Convert to array and sort by amount (highest first)
                         const categoryBreakdown = Object.entries(expensesByCategory)
@@ -1568,8 +1584,8 @@ export default class ExpensicaPlugin extends Plugin {
                         noteContent += `\n`;
                     }
                 } else {
-                    noteContent += `## 📝 Transactions\n\n`;
-                    noteContent += `No transactions recorded for this date.\n\n`;
+                    noteContent += `## ${t('review.transactions')}\n\n`;
+                    noteContent += `${t('review.noTransactionsDate')}\n\n`;
                 }
                 
                 // Create or update the note
@@ -1584,28 +1600,28 @@ export default class ExpensicaPlugin extends Plugin {
                     }
                 }
                 
-                // Determine note path
-                const notePath = this.settings.dailyReviewFolder 
-                    ? `${this.settings.dailyReviewFolder}/${noteTitle}.md`
-                    : `${noteTitle}.md`;
-                
+                // Determine note path (stable, non-localized basename)
+                const notePath = this.settings.dailyReviewFolder
+                    ? `${this.settings.dailyReviewFolder}/${noteFileBase}.md`
+                    : `${noteFileBase}.md`;
+
                 // Look for existing note
                 const existingNote = files.find(file => file.path === notePath);
                 
                 if (existingNote) {
                     await this.app.vault.modify(existingNote, noteContent);
-                    showExpensicaNotice(`Updated note: ${noteTitle}`);
+                    showExpensicaNotice(t('notice.noteUpdated', { title: noteTitle }));
                     this.app.workspace.getLeaf().openFile(existingNote);
                 } else {
                     const newNote = await this.app.vault.create(notePath, noteContent);
-                    showExpensicaNotice(`Created note: ${noteTitle}`);
+                    showExpensicaNotice(t('notice.noteCreated', { title: noteTitle }));
                     this.app.workspace.getLeaf().openFile(newNote);
                 }
             });
             modal.open();
         } catch (error) {
             console.error('Failed to create daily finance review:', error);
-            showExpensicaNotice('Failed to create daily finance review');
+            showExpensicaNotice(t('notice.reviewCreateFailed'));
         }
     }
 }
@@ -1645,6 +1661,21 @@ class ExpensicaSettingTab extends PluginSettingTab {
         }
     }
 
+    // Translated label for a color scheme enum value
+    private getColorSchemeLabel(scheme: ColorScheme): string {
+        switch (scheme) {
+            case ColorScheme.RED: return t('settings.colorScheme.red');
+            case ColorScheme.BLUE: return t('settings.colorScheme.blue');
+            case ColorScheme.GREEN: return t('settings.colorScheme.green');
+            case ColorScheme.PURPLE: return t('settings.colorScheme.purple');
+            case ColorScheme.ORANGE: return t('settings.colorScheme.orange');
+            case ColorScheme.TEAL: return t('settings.colorScheme.teal');
+            case ColorScheme.COLORBLIND_FRIENDLY: return t('settings.colorScheme.colorblind');
+            case ColorScheme.CUSTOM: return t('settings.colorScheme.custom');
+            default: return t('settings.colorScheme.red');
+        }
+    }
+
     private registerCleanup(callback: () => void) {
         this.cleanupCallbacks.push(callback);
     }
@@ -1678,13 +1709,27 @@ class ExpensicaSettingTab extends PluginSettingTab {
         containerEl.empty();
         containerEl.addClass('expensica-settings-container');
 
+        new Setting(containerEl)
+            .setName(t('settings.language.name'))
+            .setDesc(t('settings.language.desc'))
+            .addDropdown(dropdown => dropdown
+                .addOption('auto', t('settings.language.auto'))
+                .addOption('ru', 'Русский')
+                .addOption('en', 'English')
+                .setValue(this.plugin.settings.language)
+                .onChange(async (value) => {
+                    this.plugin.settings.language = value as LanguageSetting;
+                    await this.plugin.saveSettings();
+                    this.display();
+                }));
+
         // Add links card at the top
         const linksCard = containerEl.createDiv('expensica-links-card');
-        linksCard.createEl('h2', { text: 'Support & Resources' });
+        linksCard.createEl('h2', { text: t('settings.support.title') });
 
         // Buy Me a Coffee section
         const coffeeSection = linksCard.createDiv('expensica-links-section');
-        coffeeSection.createEl('h3', { text: 'Support the Developer' });
+        coffeeSection.createEl('h3', { text: t('settings.support.developer') });
         const coffeeLink = coffeeSection.createEl('a', {
             href: 'https://ko-fi.com/X8X71DLZHF',
             attr: { target: '_blank' }
@@ -1693,24 +1738,24 @@ class ExpensicaSettingTab extends PluginSettingTab {
 
         // Website and Social Links
         const socialSection = linksCard.createDiv('expensica-links-section');
-        socialSection.createEl('h3', { text: 'Connect with Expensica' });
-        
+        socialSection.createEl('h3', { text: t('settings.support.connect') });
+
         const websiteLink = socialSection.createEl('a', {
             href: 'https://expensica.com/',
-            text: '🌐 Visit Expensica Website',
+            text: t('settings.support.website'),
             attr: { target: '_blank' },
             cls: 'external-link-display-block'
         });
-        
+
         const linkedinLink = socialSection.createDiv('external-link-display-block');
-        linkedinLink.innerHTML = '<a href="https://www.linkedin.com/company/expensica/" target="_blank">💼 Follow on LinkedIn</a>';
+        linkedinLink.innerHTML = `<a href="https://www.linkedin.com/company/expensica/" target="_blank">${t('settings.support.linkedin')}</a>`;
 
         // GitHub Issues
         const githubSection = linksCard.createDiv('expensica-links-section');
-        githubSection.createEl('h3', { text: 'Report Issues & Request Features' });
+        githubSection.createEl('h3', { text: t('settings.support.issuesTitle') });
         const githubLink = githubSection.createEl('a', {
             href: 'https://github.com/dhruvir-zala/obsidian-expensica/issues',
-            text: '🐛 GitHub Issues & Feature Requests',
+            text: t('settings.support.issuesLink'),
             attr: { target: '_blank' },
             cls: 'external-link-display-block'
         });
@@ -1719,12 +1764,12 @@ class ExpensicaSettingTab extends PluginSettingTab {
         containerEl.createEl('hr', { cls: 'expensica-settings-separator' });
 
         // General settings
-        containerEl.createEl('h2', { text: 'General Settings' });
+        containerEl.createEl('h2', { text: t('settings.general.title') });
 
         // Currency setting
         new Setting(containerEl)
-            .setName('Default Currency')
-            .setDesc('Select the currency to use for all transactions.')
+            .setName(t('settings.currency.name'))
+            .setDesc(t('settings.currency.desc'))
             .then((setting) => {
                 const container = setting.controlEl.createDiv('currency-dropdown-container');
                 this.renderCurrencyDropdown(
@@ -1738,8 +1783,8 @@ class ExpensicaSettingTab extends PluginSettingTab {
             });
 
         new Setting(containerEl)
-            .setName('Time Format')
-            .setDesc('Choose 12-hour or 24-hour time for chart hour labels.')
+            .setName(t('settings.timeFormat.name'))
+            .setDesc(t('settings.timeFormat.desc'))
             .then((setting) => {
                 const container = setting.controlEl.createDiv('currency-dropdown-container');
                 this.renderTimeFormatDropdown(
@@ -1760,23 +1805,23 @@ class ExpensicaSettingTab extends PluginSettingTab {
 
         // Calendar color scheme
         new Setting(containerEl)
-            .setName('Calendar Color Scheme')
-            .setDesc('Select the color scheme for the calendar visualization.')
+            .setName(t('settings.colorScheme.name'))
+            .setDesc(t('settings.colorScheme.desc'))
             .then((setting) => {
                 const container = setting.controlEl.createDiv('color-dropdown-container');
                 
                 // Create the select display
                 const selectDisplay = container.createEl('button', {
                     cls: 'expensica-select-display expensica-standard-button expensica-settings-select-button',
-                    attr: { type: 'button', 'aria-label': 'Select calendar color scheme' }
+                    attr: { type: 'button', 'aria-label': t('settings.colorScheme.ariaLabel') }
                 });
                 const previewColor = this.getColorPreview(this.plugin.settings.calendarColorScheme);
                 const colorPreview = selectDisplay.createDiv('color-preview color-preview-bg');
                 colorPreview.setAttribute('style', `--color-preview: ${previewColor}`);
 
                 const selectText = selectDisplay.createSpan({ cls: 'expensica-select-display-text' });
-                selectText.textContent = this.plugin.settings.calendarColorScheme.charAt(0).toUpperCase() + this.plugin.settings.calendarColorScheme.slice(1);
-                
+                selectText.textContent = this.getColorSchemeLabel(this.plugin.settings.calendarColorScheme);
+
                 const selectArrow = selectDisplay.createSpan({ cls: 'expensica-select-arrow' });
                 selectArrow.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
                 
@@ -1784,14 +1829,14 @@ class ExpensicaSettingTab extends PluginSettingTab {
                 
                 // Color options
                 const colorOptions = [
-                    { value: ColorScheme.RED, text: 'Red' },
-                    { value: ColorScheme.BLUE, text: 'Blue' },
-                    { value: ColorScheme.GREEN, text: 'Green' },
-                    { value: ColorScheme.PURPLE, text: 'Purple' },
-                    { value: ColorScheme.ORANGE, text: 'Orange' },
-                    { value: ColorScheme.TEAL, text: 'Teal' },
-                    { value: ColorScheme.COLORBLIND_FRIENDLY, text: 'Colorblind Friendly' },
-                    { value: ColorScheme.CUSTOM, text: 'Custom' }
+                    { value: ColorScheme.RED, text: t('settings.colorScheme.red') },
+                    { value: ColorScheme.BLUE, text: t('settings.colorScheme.blue') },
+                    { value: ColorScheme.GREEN, text: t('settings.colorScheme.green') },
+                    { value: ColorScheme.PURPLE, text: t('settings.colorScheme.purple') },
+                    { value: ColorScheme.ORANGE, text: t('settings.colorScheme.orange') },
+                    { value: ColorScheme.TEAL, text: t('settings.colorScheme.teal') },
+                    { value: ColorScheme.COLORBLIND_FRIENDLY, text: t('settings.colorScheme.colorblind') },
+                    { value: ColorScheme.CUSTOM, text: t('settings.colorScheme.custom') }
                 ];
                 
                 colorOptions.forEach(option => {
@@ -1873,8 +1918,8 @@ class ExpensicaSettingTab extends PluginSettingTab {
 
         // Show week numbers in calendar
         new Setting(containerEl)
-            .setName('Show Week Numbers')
-            .setDesc('Display week numbers in the calendar visualization.')
+            .setName(t('settings.weekNumbers.name'))
+            .setDesc(t('settings.weekNumbers.desc'))
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.showWeekNumbers)
                 .onChange(async (value) => {
@@ -1883,8 +1928,8 @@ class ExpensicaSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Show Chart Axes')
-            .setDesc('Display chart axis lines and values in dashboard charts.')
+            .setName(t('settings.chartAxes.name'))
+            .setDesc(t('settings.chartAxes.desc'))
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.showChartAxes)
                 .onChange(async (value) => {
@@ -1899,8 +1944,8 @@ class ExpensicaSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Show Chart Grid')
-            .setDesc('Display chart grid lines in dashboard charts.')
+            .setName(t('settings.chartGrid.name'))
+            .setDesc(t('settings.chartGrid.desc'))
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.showChartGrid)
                 .onChange(async (value) => {
@@ -1915,8 +1960,8 @@ class ExpensicaSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Show Transaction Category Labels')
-            .setDesc('Display colored category labels on transaction cards.')
+            .setName(t('settings.categoryLabels.name'))
+            .setDesc(t('settings.categoryLabels.desc'))
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.showTransactionCategoryLabels)
                 .onChange(async (value) => {
@@ -1932,8 +1977,8 @@ class ExpensicaSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Enable Accounts')
-            .setDesc('Enable or disable account features.')
+            .setName(t('settings.accounts.name'))
+            .setDesc(t('settings.accounts.desc'))
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.enableAccounts)
                 .onChange(async (value) => {
@@ -1949,8 +1994,8 @@ class ExpensicaSettingTab extends PluginSettingTab {
 
         // Enable budgeting feature
         new Setting(containerEl)
-            .setName('Enable Budgeting')
-            .setDesc('Enable or disable the budgeting features.')
+            .setName(t('settings.budgeting.name'))
+            .setDesc(t('settings.budgeting.desc'))
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.enableBudgeting)
                 .onChange(async (value) => {
@@ -1967,8 +2012,8 @@ class ExpensicaSettingTab extends PluginSettingTab {
 
         // Enable daily finance review feature
         new Setting(containerEl)
-            .setName('Enable Daily Finance Review (For Today)')
-            .setDesc('Enable or disable the ability to create daily finance reviews for today.')
+            .setName(t('settings.dailyReview.name'))
+            .setDesc(t('settings.dailyReview.desc'))
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.enableDailyFinanceReview)
                 .onChange(async (value) => {
@@ -1978,8 +2023,8 @@ class ExpensicaSettingTab extends PluginSettingTab {
 
         // Enable daily finance review for any date feature
         new Setting(containerEl)
-            .setName('Enable Daily Finance Review for Any Date')
-            .setDesc('Enable or disable the ability to create/update daily finance reviews for any date.')
+            .setName(t('settings.dailyReviewAnyDate.name'))
+            .setDesc(t('settings.dailyReviewAnyDate.desc'))
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.enableDailyFinanceReviewForAnyDate)
                 .onChange(async (value) => {
@@ -1989,17 +2034,17 @@ class ExpensicaSettingTab extends PluginSettingTab {
 
         // Daily review folder setting
         new Setting(containerEl)
-            .setName('Daily Finance Review Folder')
-            .setDesc('Select a folder where all daily finance review notes will be stored.')
+            .setName(t('settings.dailyReviewFolder.name'))
+            .setDesc(t('settings.dailyReviewFolder.desc'))
             .addText(text => text
-                .setPlaceholder('Example: Daily Finance Reviews')
+                .setPlaceholder(t('settings.dailyReviewFolder.placeholder'))
                 .setValue(this.plugin.settings.dailyReviewFolder)
                 .onChange(async (value) => {
                     this.plugin.settings.dailyReviewFolder = value;
                     await this.plugin.saveSettings();
                 }))
             .addButton(button => button
-                .setButtonText('Browse')
+                .setButtonText(t('settings.dailyReviewFolder.browse'))
                 .onClick(async () => {
                     new FolderSuggestionModal(this.app, this.plugin, async (folder) => {
                         this.plugin.settings.dailyReviewFolder = folder;
@@ -2010,24 +2055,24 @@ class ExpensicaSettingTab extends PluginSettingTab {
 
         // Data management section
         const dataSectionEl = containerEl.createDiv('expensica-settings-section');
-        dataSectionEl.createEl('h3', {text: 'Data Management'});
+        dataSectionEl.createEl('h3', {text: t('settings.data.title')});
 
         // Export data with advanced options
         new Setting(dataSectionEl)
-            .setName('Export data')
-            .setDesc('Export your transactions with advanced filtering options')
+            .setName(t('settings.data.exportName'))
+            .setDesc(t('settings.data.exportDesc'))
             .addButton(button => button
-                .setButtonText('Export Transactions')
+                .setButtonText(t('settings.data.exportButton'))
                 .onClick(() => {
                     this.plugin.openExportModal();
                 }));
 
         // Import data
         new Setting(dataSectionEl)
-            .setName('Import data')
-            .setDesc('Import transactions from a JSON file')
+            .setName(t('settings.data.importName'))
+            .setDesc(t('settings.data.importDesc'))
             .addButton(button => button
-                .setButtonText('Import')
+                .setButtonText(t('settings.data.importButton'))
                 .onClick(() => {
                     // This would be better with a file picker, but we'll use a simple approach
                     new ImportModal(this.app, this.plugin).open();
@@ -2068,7 +2113,7 @@ class ExpensicaSettingTab extends PluginSettingTab {
         const searchContainer = currencyOptions.createDiv('currency-search-container');
         const searchInput = searchContainer.createEl('input', {
             type: 'text',
-            placeholder: 'Search currencies...',
+            placeholder: t('settings.currency.searchPlaceholder'),
             cls: 'currency-search-input'
         });
         
@@ -2138,8 +2183,8 @@ class ExpensicaSettingTab extends PluginSettingTab {
         const arrowIcon = selectDisplay.createDiv('expensica-select-arrow');
         const optionsContainer = selectContainer.createDiv('expensica-select-options expensica-select-hidden');
         const options = [
-            { value: '12' as const, label: '12 hours' },
-            { value: '24' as const, label: '24 hours' }
+            { value: '12' as const, label: t('settings.timeFormat.h12') },
+            { value: '24' as const, label: t('settings.timeFormat.h24') }
         ];
 
         const updateSelectedText = (value: '12' | '24') => {
@@ -2199,27 +2244,27 @@ class ImportModal extends Modal {
         contentEl.addClass('expensica-modal');
         
         const modalTitle = contentEl.createEl('h2', { cls: 'expensica-modal-title' });
-        modalTitle.innerHTML = '<span class="expensica-modal-title-icon">📥</span> Import Transactions';
-        
-        contentEl.createEl('p', {text: 'Enter the path to the JSON file to import:'});
-        
+        modalTitle.innerHTML = `<span class="expensica-modal-title-icon">📥</span> ${t('modals.import.title')}`;
+
+        contentEl.createEl('p', {text: t('modals.import.prompt')});
+
         const input = contentEl.createEl('input', {
             attr: {
                 type: 'text',
-                placeholder: 'expensica-data/file-to-import.json'
+                placeholder: t('modals.import.pathPlaceholder')
             },
             cls: 'expensica-import-input'
         });
-        
+
         const buttonContainer = contentEl.createDiv('expensica-import-buttons');
-        
+
         const cancelButton = buttonContainer.createEl('button', {
-            text: 'Cancel',
+            text: t('modals.import.cancel'),
             cls: 'expensica-btn expensica-btn-secondary'
         });
-        
+
         const importButton = buttonContainer.createEl('button', {
-            text: 'Import',
+            text: t('modals.import.import'),
             cls: 'expensica-btn expensica-btn-primary'
         });
         
@@ -2235,10 +2280,10 @@ class ImportModal extends Modal {
                     await this.plugin.importTransactionsFromJSON(filePath);
                     this.close();
                 } else {
-                    showExpensicaNotice(`File not found: ${filePath}`);
+                    showExpensicaNotice(t('notice.fileNotFound', { path: filePath }));
                 }
             } else {
-                showExpensicaNotice('Please enter a file path');
+                showExpensicaNotice(t('notice.enterFilePath'));
             }
         });
     }
@@ -2267,9 +2312,9 @@ class FolderSuggestionModal extends Modal {
         
         // Create title
         const modalTitle = contentEl.createEl('h2', { cls: 'expensica-modal-title' });
-        modalTitle.innerHTML = '<span class="expensica-modal-title-icon">📁</span> Select Folder for Daily Reviews';
-        
-        contentEl.createEl('p', {text: 'Choose where to store your daily finance review notes:'});
+        modalTitle.innerHTML = `<span class="expensica-modal-title-icon">📁</span> ${t('modals.folder.title')}`;
+
+        contentEl.createEl('p', {text: t('modals.folder.prompt')});
         
         // Get all folders in the vault
         const folders = this.getFolders();
@@ -2278,7 +2323,7 @@ class FolderSuggestionModal extends Modal {
         
         // Add option for root folder
         const rootOption = folderContainer.createDiv('folder-option');
-        rootOption.setText('Root folder');
+        rootOption.setText(t('modals.folder.rootFolder'));
         rootOption.addEventListener('click', () => {
             this.onSelect('');
             this.close();
@@ -2296,7 +2341,7 @@ class FolderSuggestionModal extends Modal {
         
         // Add option to create new folder
         const newFolderOption = folderContainer.createDiv('folder-option new-folder-option');
-        newFolderOption.setText('+ Create new folder');
+        newFolderOption.setText(t('modals.folder.createNew'));
         newFolderOption.addEventListener('click', () => {
             // Hide folder list and show input for new folder
             folderContainer.classList.add('folder-container-hidden');
@@ -2306,7 +2351,7 @@ class FolderSuggestionModal extends Modal {
             const input = newFolderContainer.createEl('input', {
                 attr: {
                     type: 'text',
-                    placeholder: 'Enter folder name'
+                    placeholder: t('modals.folder.namePlaceholder')
                 },
                 cls: 'new-folder-input'
             });
@@ -2314,12 +2359,12 @@ class FolderSuggestionModal extends Modal {
             const buttonContainer = newFolderContainer.createDiv('button-container');
             
             const cancelButton = buttonContainer.createEl('button', {
-                text: 'Cancel',
+                text: t('modals.folder.cancel'),
                 cls: 'expensica-btn expensica-btn-secondary'
             });
-            
+
             const createButton = buttonContainer.createEl('button', {
-                text: 'Create',
+                text: t('modals.folder.create'),
                 cls: 'expensica-btn expensica-btn-primary'
             });
             
@@ -2336,14 +2381,14 @@ class FolderSuggestionModal extends Modal {
                     try {
                         // Create the folder
                         await this.plugin.app.vault.createFolder(folderName);
-                        showExpensicaNotice(`Created folder: ${folderName}`);
+                        showExpensicaNotice(t('notice.folderCreated', { name: folderName }));
                         this.onSelect(folderName);
                         this.close();
                     } catch (error) {
-                        showExpensicaNotice(`Error creating folder: ${error.message}`);
+                        showExpensicaNotice(t('notice.folderCreateError', { message: error.message }));
                     }
                 } else {
-                    showExpensicaNotice('Please enter a folder name');
+                    showExpensicaNotice(t('notice.enterFolderName'));
                 }
             });
         });
@@ -2416,7 +2461,7 @@ class DatePickerModal extends Modal {
         contentEl.empty();
         
         // Create title
-        contentEl.createEl('h2', { text: 'Select Date for Daily Review' });
+        contentEl.createEl('h2', { text: t('modals.datePicker.title') });
         
         // Create date input
         const dateInput = contentEl.createEl('input', {
@@ -2430,7 +2475,7 @@ class DatePickerModal extends Modal {
         
         // Create submit button
         const submitButton = contentEl.createEl('button', {
-            text: 'Create Review',
+            text: t('modals.datePicker.submit'),
             cls: 'expensica-submit-button'
         });
         

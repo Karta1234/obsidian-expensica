@@ -21,6 +21,7 @@ import { showExpensicaNotice } from './notice';
 import { renderTransactionCard, showTransactionBulkCategoryMenu } from './transaction-card';
 import { renderCategoryChip } from './category-chip';
 import { showCategoryQuickMenu } from './category-quick-menu';
+import { t, localizedDate, localizedNumber, localeTag } from './i18n';
 
 function getAccountTransactionAmount(plugin: ExpensicaPlugin, transaction: Transaction, accountReference: string): number {
     const account = plugin.findAccountByReference(accountReference);
@@ -90,10 +91,10 @@ function formatRunningBalanceLabel(plugin: ExpensicaPlugin, balance: number, acc
 
     const normalizedSymbol = symbol.replace(/[A-Za-z]+/g, '').trim() || '$';
     const absoluteAmount = Math.abs(balance);
-    const fractionDigits = new Intl.NumberFormat('en-US', {
+    const fractionDigits = localizedNumber(absoluteAmount, {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
-    }).format(absoluteAmount);
+    });
     const sign = balance < 0 ? '-' : '';
     const amount = `${sign}${normalizedSymbol}${fractionDigits}`;
     if (!accountReference) {
@@ -118,12 +119,13 @@ class BulkRenameTransactionsModal extends Modal {
         contentEl.addClass('expensica-modal', 'expensica-bulk-rename-modal');
 
         const title = contentEl.createEl('h2', { cls: 'expensica-modal-title' });
-        title.innerHTML = '<span class="expensica-modal-title-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg></span> Bulk Rename';
+        title.innerHTML = '<span class="expensica-modal-title-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg></span> ';
+        title.appendChild(document.createTextNode(t('tx.bulkRenameTitle')));
 
         const form = contentEl.createEl('form', { cls: 'expensica-form' });
         const formGroup = form.createDiv('expensica-form-group');
         formGroup.createEl('label', {
-            text: 'Name',
+            text: t('common.name'),
             cls: 'expensica-form-label',
             attr: { for: 'expensica-bulk-rename-input' }
         });
@@ -139,12 +141,12 @@ class BulkRenameTransactionsModal extends Modal {
 
         const footer = form.createDiv('expensica-form-footer expensica-bulk-rename-modal-footer');
         const cancelButton = footer.createEl('button', {
-            text: 'Cancel',
+            text: t('common.cancel'),
             cls: 'expensica-standard-button expensica-btn expensica-btn-secondary',
             attr: { type: 'button' }
         });
         footer.createEl('button', {
-            text: 'Update',
+            text: t('common.update'),
             cls: 'expensica-standard-button expensica-btn expensica-btn-primary',
             attr: { type: 'submit' }
         });
@@ -157,7 +159,7 @@ class BulkRenameTransactionsModal extends Modal {
             event.preventDefault();
             const nextName = input.value.trim();
             if (!nextName) {
-                showExpensicaNotice('Transaction name is required.');
+                showExpensicaNotice(t('tx.nameRequired'));
                 input.focus();
                 return;
             }
@@ -238,7 +240,7 @@ export class ExpensicaTransactionsView implements TransactionView {
         const searchContainer = searchControls.createDiv('expensica-search-container expensica-custom-search');
         const searchInput = searchContainer.createEl('input', {
             type: 'text',
-            placeholder: 'Search transactions...',
+            placeholder: t('tx.searchPlaceholder'),
             cls: 'expensica-search-input expensica-custom-input',
             attr: {
                 id: 'expensica-search-input'
@@ -301,19 +303,19 @@ export class ExpensicaTransactionsView implements TransactionView {
             cls: 'expensica-category-filter-button',
             attr: {
                 type: 'button',
-                'aria-label': 'Filter transactions',
-                title: 'Filter transactions'
+                'aria-label': t('tx.filterAria'),
+                title: t('tx.filterAria')
             }
         });
         filterButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>';
 
         const filterMenu = filterContainer.createDiv('expensica-filter-menu');
         filterMenu.addClass('is-hidden');
-        filterMenu.createDiv({ text: 'Filter by', cls: 'expensica-filter-menu-title' });
+        filterMenu.createDiv({ text: t('tx.filterBy'), cls: 'expensica-filter-menu-title' });
 
-        this.renderFilterMenuSection(filterMenu, 'Type', (submenu) => this.renderTypeFilterOptions(submenu));
+        this.renderFilterMenuSection(filterMenu, t('tx.filterType'), (submenu) => this.renderTypeFilterOptions(submenu));
         if (this.plugin.settings.enableAccounts) {
-            this.renderFilterMenuSection(filterMenu, 'Accounts', (submenu) => this.renderAccountFilterOptions(submenu));
+            this.renderFilterMenuSection(filterMenu, t('tx.filterAccounts'), (submenu) => this.renderAccountFilterOptions(submenu));
         }
         this.renderCategoryQuickFilterSection(filterMenu);
 
@@ -390,9 +392,9 @@ export class ExpensicaTransactionsView implements TransactionView {
     private renderTypeFilterOptions(container: HTMLElement) {
         const optionsHost = container.createDiv('expensica-filter-submenu-options');
         const options = [
-            { value: TransactionType.INCOME, label: 'Income', emoji: '💰' },
-            { value: TransactionType.EXPENSE, label: 'Expenses', emoji: '💸' },
-            { value: TransactionType.INTERNAL, label: 'Internal', emoji: '🔁' }
+            { value: TransactionType.INCOME, label: t('tx.typeIncome'), emoji: '💰' },
+            { value: TransactionType.EXPENSE, label: t('tx.typeExpenses'), emoji: '💸' },
+            { value: TransactionType.INTERNAL, label: t('tx.typeInternal'), emoji: '🔁' }
         ];
 
         options.forEach(option => {
@@ -420,7 +422,7 @@ export class ExpensicaTransactionsView implements TransactionView {
         const accounts = this.plugin.getAccounts();
 
         if (accounts.length === 0) {
-            optionsHost.createDiv({ text: 'No accounts', cls: 'expensica-filter-menu-empty' });
+            optionsHost.createDiv({ text: t('tx.noAccounts'), cls: 'expensica-filter-menu-empty' });
             return;
         }
 
@@ -452,11 +454,11 @@ export class ExpensicaTransactionsView implements TransactionView {
             cls: 'expensica-standard-button expensica-filter-menu-item',
             attr: {
                 type: 'button',
-                'aria-label': 'Filter by categories'
+                'aria-label': t('tx.filterByCategories')
             }
         });
         menuButton.style.textAlign = 'left';
-        menuButton.createSpan({ text: 'Categories', cls: 'expensica-filter-menu-value' });
+        menuButton.createSpan({ text: t('tx.filterCategories'), cls: 'expensica-filter-menu-value' });
 
         menuButton.addEventListener('click', (event) => {
             event.stopPropagation();
@@ -484,7 +486,7 @@ export class ExpensicaTransactionsView implements TransactionView {
 
         if (categories.length === 0) {
             optionsHost.createDiv({
-                text: 'No categories',
+                text: t('tx.noCategories'),
                 cls: 'expensica-filter-menu-empty'
             });
             return;
@@ -526,7 +528,7 @@ export class ExpensicaTransactionsView implements TransactionView {
         selectedFiltersContainer.toggleClass('is-hidden', !hasFilters);
 
         this.selectedTypeFilters.forEach(type => {
-            const label = type === TransactionType.INCOME ? 'Income' : type === TransactionType.EXPENSE ? 'Expenses' : 'Internal';
+            const label = type === TransactionType.INCOME ? t('tx.typeIncome') : type === TransactionType.EXPENSE ? t('tx.typeExpenses') : t('tx.typeInternal');
             this.renderTextFilterChip(selectedFiltersContainer, label, () => this.removeSelectedType(type));
         });
 
@@ -553,7 +555,7 @@ export class ExpensicaTransactionsView implements TransactionView {
                 interactive: true
             });
             chip.addClass('expensica-selected-filter-chip');
-            chip.setAttribute('aria-label', `Remove ${category.name} filter`);
+            chip.setAttribute('aria-label', t('tx.removeFilter', { name: category.name }));
 
             const removeIcon = chip.createSpan('expensica-selected-filter-remove');
             removeIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
@@ -569,7 +571,7 @@ export class ExpensicaTransactionsView implements TransactionView {
             cls: 'expensica-selected-filter-chip expensica-selected-filter-chip-text',
             attr: {
                 type: 'button',
-                'aria-label': `Remove ${text} filter`
+                'aria-label': t('tx.removeFilter', { name: text })
             }
         });
         chip.createSpan({ text });
@@ -689,7 +691,7 @@ export class ExpensicaTransactionsView implements TransactionView {
         const displaySymbol = configuredSymbol.includes('$') ? '$' : configuredSymbol;
 
         try {
-            return new Intl.NumberFormat('en-US', {
+            return new Intl.NumberFormat(localeTag(), {
                 style: 'currency',
                 currency: currencyCode,
                 currencyDisplay: 'symbol'
@@ -705,7 +707,7 @@ export class ExpensicaTransactionsView implements TransactionView {
         const totals = this.getFilteredTransactionTotals();
         const statChipsContainer = container.createDiv('expensica-transaction-total-chips expensica-transactions-tab-chips');
         statChipsContainer.createEl('span', {
-            text: this.filteredTransactions.length > 0 ? `${this.filteredTransactions.length} total` : '',
+            text: this.filteredTransactions.length > 0 ? t('tx.total', { count: this.filteredTransactions.length }) : '',
             cls: `expensica-transaction-count expensica-transaction-count-chip ${this.filteredTransactions.length === 0 ? 'is-hidden' : ''}`.trim()
         });
         this.renderTransactionTotalChip(statChipsContainer, 'spent', totals.expenses);
@@ -717,7 +719,7 @@ export class ExpensicaTransactionsView implements TransactionView {
             return null;
         }
 
-        const label = type === 'spent' ? 'Spent' : 'Income';
+        const label = type === 'spent' ? t('tx.spent') : t('tx.income');
         const className = type === 'spent'
             ? 'expensica-transaction-total-spent'
             : 'expensica-transaction-total-income';
@@ -927,7 +929,7 @@ export class ExpensicaTransactionsView implements TransactionView {
             const emptyState = transactionsSection.createDiv('expensica-empty-state');
             emptyState.createEl('div', { text: '📋', cls: 'expensica-empty-state-icon' });
             emptyState.createEl('p', {
-                text: 'No transactions found matching your filters.',
+                text: t('tx.emptyState'),
                 cls: 'expensica-empty-state-message'
             });
             return;
@@ -980,14 +982,14 @@ export class ExpensicaTransactionsView implements TransactionView {
     }
 
     private getTransactionMonthLabel(transaction: Transaction): string {
-        return parseLocalDate(transaction.date).toLocaleDateString('en-US', {
+        return localizedDate(parseLocalDate(transaction.date), {
             month: 'long',
             year: 'numeric'
         });
     }
 
     private getTransactionDayLabel(transaction: Transaction): string {
-        return parseLocalDate(transaction.date).toLocaleDateString('en-US', {
+        return localizedDate(parseLocalDate(transaction.date), {
             weekday: 'long',
             month: 'long',
             day: 'numeric'
@@ -1042,8 +1044,8 @@ export class ExpensicaTransactionsView implements TransactionView {
             cls: 'expensica-standard-button expensica-btn expensica-btn-secondary expensica-transaction-bulk-icon-button expensica-transaction-bulk-clear',
             attr: {
                 type: 'button',
-                'aria-label': 'Clear selected transactions',
-                title: 'Clear selected transactions'
+                'aria-label': t('tx.clearSelected'),
+                title: t('tx.clearSelected')
             }
         });
         clearButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
@@ -1052,7 +1054,7 @@ export class ExpensicaTransactionsView implements TransactionView {
         });
 
         leftGroup.createSpan({
-            text: `${selectedTransactions.length} selected`,
+            text: t('tx.selected', { count: selectedTransactions.length }),
             cls: 'expensica-transaction-bulk-count'
         });
 
@@ -1060,16 +1062,16 @@ export class ExpensicaTransactionsView implements TransactionView {
         const allVisibleSelected = visibleTransactions.length > 0
             && visibleTransactions.every(transaction => this.selectedTransactionIds.has(transaction.id));
         const selectAllButton = leftGroup.createEl('button', {
-            text: 'Select All',
+            text: t('tx.selectAll'),
             cls: 'expensica-standard-button expensica-transaction-bulk-select-all-btn',
             attr: {
                 type: 'button',
-                'aria-label': allVisibleSelected ? 'All visible transactions selected' : 'Select all visible transactions'
+                'aria-label': allVisibleSelected ? t('tx.allVisibleSelected') : t('tx.selectAllVisible')
             }
         });
         selectAllButton.disabled = allVisibleSelected;
         if (allVisibleSelected) {
-            selectAllButton.title = 'All visible transactions are already selected.';
+            selectAllButton.title = t('tx.allVisibleSelectedTitle');
         } else {
             selectAllButton.addEventListener('click', () => {
                 visibleTransactions.forEach(transaction => this.selectedTransactionIds.add(transaction.id));
@@ -1084,19 +1086,19 @@ export class ExpensicaTransactionsView implements TransactionView {
         const hasInternalOnly = selectedTypes.size === 1 && selectedTypes.has(TransactionType.INTERNAL);
         const actionsGroup = footer.createDiv('expensica-transaction-bulk-group expensica-transaction-bulk-group-right');
         const categoryButton = actionsGroup.createEl('button', {
-            text: 'Category',
+            text: t('tx.category'),
             cls: 'expensica-standard-button expensica-transaction-bulk-category-btn',
             attr: {
                 type: 'button',
-                'aria-label': hasMixedTypes ? 'Category unavailable for mixed transaction types' : 'Change category for selected transactions'
+                'aria-label': hasMixedTypes ? t('tx.categoryMixedAria') : t('tx.categoryChangeAria')
             }
         });
 
         if (hasMixedTypes || hasInternalOnly) {
             categoryButton.disabled = true;
             categoryButton.title = hasInternalOnly
-                ? 'Internal transaction category cannot be changed.'
-                : 'Select only income or only expense transactions to bulk change category.';
+                ? t('tx.categoryInternalDisabled')
+                : t('tx.categoryMixedDisabled');
         } else {
             categoryButton.addEventListener('click', (event) => {
                 event.preventDefault();
@@ -1114,8 +1116,8 @@ export class ExpensicaTransactionsView implements TransactionView {
             cls: 'expensica-standard-button expensica-transaction-bulk-icon-button expensica-transaction-bulk-rename',
             attr: {
                 type: 'button',
-                'aria-label': 'Rename selected transactions',
-                title: 'Rename selected transactions'
+                'aria-label': t('tx.renameSelected'),
+                title: t('tx.renameSelected')
             }
         });
         renameButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>';
@@ -1129,8 +1131,8 @@ export class ExpensicaTransactionsView implements TransactionView {
             cls: 'expensica-standard-button expensica-btn expensica-btn-danger-solid expensica-transaction-bulk-icon-button expensica-transaction-bulk-delete',
             attr: {
                 type: 'button',
-                'aria-label': 'Delete selected transactions',
-                title: 'Delete selected transactions'
+                'aria-label': t('tx.deleteSelected'),
+                title: t('tx.deleteSelected')
             }
         });
         deleteButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>';
@@ -1159,7 +1161,7 @@ export class ExpensicaTransactionsView implements TransactionView {
         const selectedTransactions = this.getSelectedTransactions();
         const hasMixedTypes = new Set(selectedTransactions.map(transaction => transaction.type)).size > 1;
         if (hasMixedTypes) {
-            showExpensicaNotice('You can only change one transaction type at a time: Income or Expenses.');
+            showExpensicaNotice(t('tx.mixedTypeNotice'));
         }
     }
 
@@ -1180,7 +1182,7 @@ export class ExpensicaTransactionsView implements TransactionView {
         this.selectedTransactionIds.clear();
         this.persistTransactionsState();
         this.refreshTransactionsListOnly();
-        showExpensicaNotice('Transactions updated successfully');
+        showExpensicaNotice(t('tx.updatedNotice'));
     }
 
     private async bulkRenameSelectedTransactions(name: string) {
@@ -1199,7 +1201,7 @@ export class ExpensicaTransactionsView implements TransactionView {
         await this.loadTransactionsData(false);
         this.persistTransactionsState();
         this.refreshTransactionsListOnly();
-        showExpensicaNotice('Transactions renamed successfully');
+        showExpensicaNotice(t('tx.renamedNotice'));
     }
 
     private async deleteSelectedTransactions() {
@@ -1210,8 +1212,8 @@ export class ExpensicaTransactionsView implements TransactionView {
 
         new ConfirmationModal(
             this.app,
-            'Delete Transactions?',
-            `Are you sure you want to delete ${selectedTransactions.length} selected transactions? This action cannot be undone.`,
+            t('tx.deleteBulkTitle'),
+            t('tx.deleteBulkMessage', { count: selectedTransactions.length }),
             async (confirmed) => {
                 if (!confirmed) {
                     return;
@@ -1224,7 +1226,7 @@ export class ExpensicaTransactionsView implements TransactionView {
                 await this.loadTransactionsData(false);
                 this.persistTransactionsState();
                 this.refreshTransactionsListOnly();
-                showExpensicaNotice('Transactions deleted successfully');
+                showExpensicaNotice(t('tx.deletedNotice'));
             }
         ).open();
     }
@@ -1365,7 +1367,7 @@ export class ExpensicaTransactionsView implements TransactionView {
         this.renderPaginationButton(
             navigationContainer,
             '1',
-            'First page',
+            t('tx.firstPage'),
             this.currentPage === 1,
             () => this.setCurrentPage(1, placement === 'bottom')
         );
@@ -1374,7 +1376,7 @@ export class ExpensicaTransactionsView implements TransactionView {
         this.renderPaginationButton(
             navigationContainer,
             '<',
-            'Previous page',
+            t('tx.previousPage'),
             this.currentPage === 1,
             () => this.setCurrentPage(this.currentPage - 1, placement === 'bottom')
         );
@@ -1384,7 +1386,7 @@ export class ExpensicaTransactionsView implements TransactionView {
             this.renderPaginationButton(
                 navigationContainer,
                 String(page),
-                `Page ${page} of ${this.totalPages}`,
+                t('tx.pageOf', { page, total: this.totalPages }),
                 false,
                 () => this.setCurrentPage(page, placement === 'bottom'),
                 page === this.currentPage ? 'active' : ''
@@ -1395,7 +1397,7 @@ export class ExpensicaTransactionsView implements TransactionView {
         this.renderPaginationButton(
             navigationContainer,
             '>',
-            'Next page',
+            t('tx.nextPage'),
             this.currentPage === this.totalPages,
             () => this.setCurrentPage(this.currentPage + 1, placement === 'bottom')
         );
@@ -1404,14 +1406,14 @@ export class ExpensicaTransactionsView implements TransactionView {
         this.renderPaginationButton(
             navigationContainer,
             String(this.totalPages),
-            'Last page',
+            t('tx.lastPage'),
             this.currentPage === this.totalPages,
             () => this.setCurrentPage(this.totalPages, placement === 'bottom')
         );
 
         // Items per page selector container
         const itemsPerPageContainer = paginationSection.createDiv('expensica-items-per-page');
-        itemsPerPageContainer.createEl('span', { text: 'Per Page:' });
+        itemsPerPageContainer.createEl('span', { text: t('tx.perPage') });
         this.renderPageSizeSelector(itemsPerPageContainer);
     }
 
@@ -1424,7 +1426,7 @@ export class ExpensicaTransactionsView implements TransactionView {
 
         const countEl = container.querySelector('.expensica-transaction-count-chip');
         if (countEl) {
-            countEl.textContent = this.filteredTransactions.length > 0 ? `${this.filteredTransactions.length} total` : '';
+            countEl.textContent = this.filteredTransactions.length > 0 ? t('tx.total', { count: this.filteredTransactions.length }) : '';
             countEl.classList.toggle('is-hidden', this.filteredTransactions.length === 0);
         }
 
@@ -1466,10 +1468,16 @@ export class ExpensicaTransactionsView implements TransactionView {
         const transaction = this.transactions.find(t => t.id === id);
         if (!transaction) return;
 
+        const typeWord = transaction.type === TransactionType.INCOME
+            ? t('tx.typeWord.income')
+            : transaction.type === TransactionType.EXPENSE
+                ? t('tx.typeWord.expense')
+                : t('tx.typeWord.internal');
+
         new ConfirmationModal(
             this.app,
-            'Delete Transaction?',
-            `Are you sure you want to delete this ${transaction.type.toLowerCase()} transaction? This action cannot be undone.`,
+            t('tx.deleteSingleTitle'),
+            t('tx.deleteSingleMessage', { type: typeWord }),
             async (confirmed) => {
                 if (confirmed) {
                     onConfirmDelete?.();
@@ -1478,7 +1486,7 @@ export class ExpensicaTransactionsView implements TransactionView {
                     await this.loadTransactionsData(false);
                     this.persistTransactionsState();
                     this.refreshTransactionsListOnly();
-                    showExpensicaNotice('Transaction deleted successfully');
+                    showExpensicaNotice(t('tx.deletedSingleNotice'));
                     onDeleted?.();
                 }
             }
@@ -1496,7 +1504,7 @@ export class ExpensicaTransactionsView implements TransactionView {
             case DateRangeType.TODAY:
                 start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                 end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-                label = 'Today';
+                label = t('dateRange.today');
                 break;
                 
             case DateRangeType.THIS_WEEK:
@@ -1504,7 +1512,7 @@ export class ExpensicaTransactionsView implements TransactionView {
                 const dayOfWeek = now.getDay();
                 start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek);
                 end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (6 - dayOfWeek), 23, 59, 59, 999);
-                label = 'This Week';
+                label = t('dateRange.thisWeek');
                 break;
 
             case DateRangeType.LAST_WEEK:
@@ -1512,36 +1520,36 @@ export class ExpensicaTransactionsView implements TransactionView {
                 const currentDayOfWeek = now.getDay();
                 start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - currentDayOfWeek - 7);
                 end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - currentDayOfWeek - 1, 23, 59, 59, 999);
-                label = 'Last Week';
+                label = t('dateRange.lastWeek');
                 break;
                 
             case DateRangeType.THIS_MONTH:
                 start = new Date(now.getFullYear(), now.getMonth(), 1);
                 end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-                label = 'This Month';
+                label = t('dateRange.thisMonth');
                 break;
                 
             case DateRangeType.LAST_MONTH:
                 start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
                 end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
-                label = 'Last Month';
+                label = t('dateRange.lastMonth');
                 break;
                 
             case DateRangeType.THIS_YEAR:
                 start = new Date(now.getFullYear(), 0, 1);
                 end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
-                label = 'This Year';
+                label = t('dateRange.thisYear');
                 break;
 
             case DateRangeType.LAST_YEAR:
                 start = new Date(now.getFullYear() - 1, 0, 1);
                 end = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
-                label = 'Last Year';
+                label = t('dateRange.lastYear');
                 break;
 
             case DateRangeType.ALL_TIME:
                 ({ start, end } = this.getAllTimeDateRangeBounds());
-                label = 'All Time';
+                label = t('dateRange.allTime');
                 break;
                 
             case DateRangeType.CUSTOM:
@@ -1557,14 +1565,14 @@ export class ExpensicaTransactionsView implements TransactionView {
                         month: 'short', 
                         day: 'numeric' 
                     };
-                    const startStr = start.toLocaleDateString(undefined, formatOptions);
-                    const endStr = end.toLocaleDateString(undefined, formatOptions);
+                    const startStr = localizedDate(start, formatOptions);
+                    const endStr = localizedDate(end, formatOptions);
                     label = `${startStr} - ${endStr}`;
                 } else {
                     // Fallback to this month if custom dates are not provided
                     start = new Date(now.getFullYear(), now.getMonth(), 1);
                     end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-                    label = 'Custom Range';
+                    label = t('dateRange.customRange');
                 }
                 break;
         }

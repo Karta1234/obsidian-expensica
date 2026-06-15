@@ -2,6 +2,7 @@ import { App, Modal, Setting } from 'obsidian';
 import { showExpensicaNotice } from './notice';
 import { ExportOptions, ExportService } from './export-service';
 import { Category, CategoryType, formatDate } from './models';
+import { t } from './i18n';
 import ExpensicaPlugin from '../main';
 
 export class ExportModal extends Modal {
@@ -36,19 +37,19 @@ export class ExportModal extends Modal {
     
     // Modal header
     const modalTitle = contentEl.createEl('h2', { cls: 'expensica-modal-title' });
-    modalTitle.innerHTML = '<span class="expensica-modal-title-icon">📤</span> Export Transactions';
+    modalTitle.innerHTML = `<span class="expensica-modal-title-icon">📤</span> ${t('export.title')}`;
     
     // Create form container
     const form = contentEl.createEl('form', { cls: 'expensica-form' });
     
     // Export format
     new Setting(form)
-      .setName('Export Format')
-      .setDesc('Choose the format for your exported data')
+      .setName(t('export.formatName'))
+      .setDesc(t('export.formatDesc'))
       .addDropdown(dropdown => dropdown
-        .addOption('csv', 'CSV (Excel, Google Sheets)')
-        .addOption('json', 'JSON (Data backup)')
-        .addOption('pdf', 'PDF (Beautiful report)')
+        .addOption('csv', t('export.formatCsv'))
+        .addOption('json', t('export.formatJson'))
+        .addOption('pdf', t('export.formatPdf'))
         .setValue(this.exportOptions.format)
         .onChange(value => {
           this.exportOptions.format = value as 'csv' | 'json' | 'pdf';
@@ -63,23 +64,23 @@ export class ExportModal extends Modal {
     
     // Date range
     const dateRangeContainer = form.createDiv('expensica-setting-group');
-    dateRangeContainer.createEl('h3', { text: 'Date Range', cls: 'expensica-setting-group-title' });
-    
+    dateRangeContainer.createEl('h3', { text: t('export.dateRangeTitle'), cls: 'expensica-setting-group-title' });
+
     new Setting(dateRangeContainer)
-      .setName('From Date')
-      .setDesc('Export transactions from this date (optional)')
+      .setName(t('export.fromDateName'))
+      .setDesc(t('export.fromDateDesc'))
       .addText(text => text
-        .setPlaceholder('YYYY-MM-DD')
+        .setPlaceholder(t('export.datePlaceholder'))
         .setValue(this.exportOptions.dateFrom || '')
         .onChange(value => {
           this.exportOptions.dateFrom = value ? value : null;
         }));
     
     new Setting(dateRangeContainer)
-      .setName('To Date')
-      .setDesc('Export transactions until this date (optional)')
+      .setName(t('export.toDateName'))
+      .setDesc(t('export.toDateDesc'))
       .addText(text => text
-        .setPlaceholder('YYYY-MM-DD')
+        .setPlaceholder(t('export.datePlaceholder'))
         .setValue(this.exportOptions.dateTo || '')
         .onChange(value => {
           this.exportOptions.dateTo = value ? value : null;
@@ -87,10 +88,10 @@ export class ExportModal extends Modal {
     
     // Transaction Types
     const typeContainer = form.createDiv('expensica-setting-group');
-    typeContainer.createEl('h3', { text: 'Transaction Types', cls: 'expensica-setting-group-title' });
-    
+    typeContainer.createEl('h3', { text: t('export.typesTitle'), cls: 'expensica-setting-group-title' });
+
     new Setting(typeContainer)
-      .setName('Include Expenses')
+      .setName(t('export.includeExpenses'))
       .addToggle(toggle => toggle
         .setValue(this.exportOptions.includeExpenses)
         .onChange(value => {
@@ -98,7 +99,7 @@ export class ExportModal extends Modal {
         }));
     
     new Setting(typeContainer)
-      .setName('Include Income')
+      .setName(t('export.includeIncome'))
       .addToggle(toggle => toggle
         .setValue(this.exportOptions.includeIncome)
         .onChange(value => {
@@ -107,7 +108,7 @@ export class ExportModal extends Modal {
     
     // Categories
     const categoriesContainer = form.createDiv('expensica-setting-group');
-    categoriesContainer.createEl('h3', { text: 'Categories to Include', cls: 'expensica-setting-group-title' });
+    categoriesContainer.createEl('h3', { text: t('export.categoriesTitle'), cls: 'expensica-setting-group-title' });
     
     // Add a "Select All" checkbox
     const selectAllContainer = categoriesContainer.createDiv('expensica-select-all');
@@ -115,8 +116,8 @@ export class ExportModal extends Modal {
       type: 'checkbox',
       attr: { id: 'select-all-categories' }
     });
-    selectAllContainer.createEl('label', { 
-      text: 'Select All Categories',
+    selectAllContainer.createEl('label', {
+      text: t('export.selectAllCategories'),
       attr: { for: 'select-all-categories' }
     });
     selectAllCheckbox.checked = true;
@@ -141,21 +142,21 @@ export class ExportModal extends Modal {
     
     // Expense categories
     const expenseCategoriesContainer = categoryList.createDiv('expensica-category-group');
-    expenseCategoriesContainer.createEl('h4', { text: 'Expense Categories' });
+    expenseCategoriesContainer.createEl('h4', { text: t('export.expenseCategories') });
     this.renderCategoryCheckboxes(expenseCategoriesContainer, CategoryType.EXPENSE);
     
     // Income categories
     const incomeCategoriesContainer = categoryList.createDiv('expensica-category-group');
-    incomeCategoriesContainer.createEl('h4', { text: 'Income Categories' });
+    incomeCategoriesContainer.createEl('h4', { text: t('export.incomeCategories') });
     this.renderCategoryCheckboxes(incomeCategoriesContainer, CategoryType.INCOME);
     
     // Add filename setting with default name
     const filenameContainer = form.createDiv('expensica-setting-group');
-    filenameContainer.createEl('h3', { text: 'Filename', cls: 'expensica-setting-group-title' });
-    
+    filenameContainer.createEl('h3', { text: t('export.filenameTitle'), cls: 'expensica-setting-group-title' });
+
     new Setting(filenameContainer)
-      .setName('Export Filename')
-      .setDesc('Enter the name for your export file')
+      .setName(t('export.filenameName'))
+      .setDesc(t('export.filenameDesc'))
       .addText(text => text
         .setValue(this.exportOptions.filename)
         .onChange(value => {
@@ -167,13 +168,13 @@ export class ExportModal extends Modal {
     // Buttons
     const formFooter = form.createDiv('expensica-form-footer');
     const cancelBtn = formFooter.createEl('button', {
-      text: 'Cancel',
+      text: t('export.cancel'),
       cls: 'expensica-btn expensica-btn-secondary',
       attr: { type: 'button' }
     });
-    
+
     const exportBtn = formFooter.createEl('button', {
-      text: 'Export',
+      text: t('export.exportButton'),
       cls: 'expensica-btn expensica-btn-primary',
       attr: { type: 'button' }
     });
@@ -191,7 +192,7 @@ export class ExportModal extends Modal {
   private performExport() {
     // Validate export options
     if (!this.exportOptions.includeExpenses && !this.exportOptions.includeIncome) {
-      showExpensicaNotice('Please include at least one transaction type (Expenses or Income)');
+      showExpensicaNotice(t('export.needOneType'));
       return;
     }
     
@@ -206,7 +207,7 @@ export class ExportModal extends Modal {
       });
       
       if (selectedCategories.length === 0) {
-        showExpensicaNotice('Please select at least one category');
+        showExpensicaNotice(t('export.needOneCategory'));
         return;
       }
       
@@ -237,9 +238,8 @@ export class ExportModal extends Modal {
         mimeType = 'application/json';
       } else {
         exportData = ExportService.generatePDF(
-          filteredTransactions, 
-          this.plugin.settings.categories,
-          this.plugin.settings.defaultCurrency
+          filteredTransactions,
+          this.plugin.settings.categories
         );
         mimeType = 'application/pdf';
       }
@@ -248,14 +248,14 @@ export class ExportModal extends Modal {
       this.downloadFile(exportData, this.exportOptions.filename, mimeType);
       
       // Show success message
-      showExpensicaNotice(`Export completed successfully!`);
+      showExpensicaNotice(t('export.success'));
       
       // Close the modal
       this.close();
       
     } catch (error) {
       console.error('Export error:', error);
-      showExpensicaNotice('Export failed. Please check the console for errors.');
+      showExpensicaNotice(t('export.failed'));
     }
   }
   

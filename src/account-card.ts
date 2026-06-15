@@ -1,4 +1,5 @@
 import { formatCurrency, type Account, type Transaction, type Currency, getAccountEmoji, getAccountTypeLabel } from './models';
+import { t } from './i18n';
 
 interface AccountCardOptions {
     account: Account;
@@ -78,10 +79,10 @@ export function renderCreateAccountCard(container: HTMLElement, options: CreateA
 
     const textGroup = identity.createDiv('expensica-account-card-text');
     const titleRow = textGroup.createDiv('expensica-account-card-title-row');
-    titleRow.createSpan({ text: 'Create New Account', cls: 'expensica-account-card-name' });
+    titleRow.createSpan({ text: t('account.createTitle'), cls: 'expensica-account-card-name' });
 
     textGroup.createSpan({
-        text: 'Add chequing, saving, credit, or other',
+        text: t('account.createDesc'),
         cls: 'expensica-account-card-date'
     });
 

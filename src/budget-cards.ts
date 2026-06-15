@@ -1,4 +1,5 @@
-import { type Budget, formatCurrency } from './models';
+import { type Budget, BudgetPeriod, formatCurrency } from './models';
+import { t } from './i18n';
 
 interface BudgetCardOptions {
     budget: Budget;
@@ -87,11 +88,11 @@ export function renderBudgetCard(container: HTMLElement, options: BudgetCardOpti
 
     const balanceEl = amountEl.createDiv('expensica-transaction-balance expensica-budget-card-balance');
     balanceEl.createEl('span', {
-        text: `Spent ${formatCompactCurrency(spent, currencyCode)}`,
+        text: t('budget.spent', { amount: formatCompactCurrency(spent, currencyCode) }),
         cls: 'expensica-transaction-balance-label'
     });
     balanceEl.createEl('span', {
-        text: `Remaining ${formatCompactCurrency(remaining, currencyCode)}`,
+        text: t('budget.remaining', { amount: formatCompactCurrency(remaining, currencyCode) }),
         cls: 'expensica-transaction-balance-label'
     });
 
@@ -99,7 +100,16 @@ export function renderBudgetCard(container: HTMLElement, options: BudgetCardOpti
 }
 
 function formatBudgetPeriodLabel(periodLabel: string): string {
-    return periodLabel.charAt(0).toUpperCase() + periodLabel.slice(1).toLowerCase();
+    switch (periodLabel) {
+        case BudgetPeriod.MONTHLY:
+            return t('budget.periodMonthly');
+        case BudgetPeriod.QUARTERLY:
+            return t('budget.periodQuarterly');
+        case BudgetPeriod.YEARLY:
+            return t('budget.periodYearly');
+        default:
+            return t('budget.periodMonthly');
+    }
 }
 
 function formatCompactCurrency(amount: number, currencyCode: string): string {
